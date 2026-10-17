@@ -1,0 +1,1980 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>童学 · 教学管理系统</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sage: {
+                            50: '#f4f6f4',
+                            100: '#e3e8e3',
+                            200: '#c7d2c7',
+                            300: '#a3b5a3',
+                            400: '#7c937c',
+                            500: '#5e755e',
+                            600: '#485c48',
+                            700: '#3a4a3a',
+                            800: '#303c30',
+                            900: '#293229',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #c7d2c7; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a3b5a3; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col antialiased">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-y-[-100px] opacity-0 transition-all duration-300 ease-in-out bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+        <i id="toastIcon" class="fas fa-check-circle text-emerald-400 text-lg"></i>
+        <span id="toastMsg" class="text-sm font-medium">操作成功</span>
+    </div>
+
+    <!-- Modal Container -->
+    <div id="modalOverlay" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <div id="modalContent" class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto custom-scrollbar p-6 transform scale-95 opacity-0 transition-all duration-200">
+            <!-- Dynamic Modal Content -->
+        </div>
+    </div>
+
+    <!-- Header Navigation Bar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Logo & Semester Info -->
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-sage-600 flex items-center justify-center text-white font-bold text-xl shadow-md shadow-sage-200">
+                            童
+                        </div>
+                        <div>
+                            <h1 class="text-lg font-bold text-slate-800 leading-tight">童学 · 教学管理系统</h1>
+                            <p class="text-xs text-slate-500 font-medium hidden sm:block">Sage Green 智能托管与教务管理平台</p>
+                        </div>
+                    </div>
+
+                    <div class="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block"></div>
+
+                    <!-- Global Semester & Week Display Widget -->
+                    <div class="hidden md:flex items-center gap-2 bg-sage-50 border border-sage-200 px-3 py-1.5 rounded-lg text-xs">
+                        <i class="far fa-calendar-alt text-sage-600"></i>
+                        <span id="headerTodayDate" class="font-medium text-slate-600">2026.10.17</span>
+                        <span class="text-slate-300">|</span>
+                        <span id="headerSemesterBadge" class="font-bold text-sage-700 bg-sage-200/60 px-2 py-0.5 rounded text-[11px]">2026秋季学期</span>
+                        <span id="headerWeekBadge" class="font-extrabold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded text-[11px]">第 7 周</span>
+                        <button onclick="openSemesterSettingsModal()" class="text-slate-400 hover:text-sage-700 ml-1 transition" title="学期与时间设置">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Role Switcher & User Profile -->
+                <div class="flex items-center gap-3">
+                    <!-- Mobile Semester Badge -->
+                    <div class="md:hidden flex items-center gap-1 text-xs bg-sage-100 text-sage-800 px-2 py-1 rounded-md font-medium">
+                        <span id="mobileWeekBadge">秋季 第7周</span>
+                    </div>
+
+                    <!-- Role Switch Toggle Button -->
+                    <div class="bg-slate-100 p-1 rounded-xl border border-slate-200 flex items-center">
+                        <button id="roleBtnTeacher" onclick="switchRole('teacher')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-1.5">
+                            <i class="fas fa-chalkboard-teacher"></i> 教师端
+                        </button>
+                        <button id="roleBtnPrincipal" onclick="switchRole('principal')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-1.5">
+                            <i class="fas fa-user-shield"></i> 校长端
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- =================================================================== -->
+        <!--                             教师端 View                            -->
+        <!-- =================================================================== -->
+        <div id="teacherView" class="space-y-6">
+
+            <!-- Sub Nav Navigation Tabs for Teacher -->
+            <div class="bg-white p-2 rounded-2xl border border-slate-200/80 shadow-sm flex flex-wrap gap-2">
+                <button onclick="switchTeacherTab('sop')" id="tTabBtnSop" class="t-tab-btn flex-1 min-w-[120px] py-2.5 px-4 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 bg-sage-600 text-white shadow-sm">
+                    <i class="fas fa-tasks"></i> 每日教学 SOP 工作台
+                </button>
+                <button onclick="switchTeacherTab('feedback')" id="tTabBtnFeedback" class="t-tab-btn flex-1 min-w-[120px] py-2.5 px-4 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-paper-plane"></i> 家长反馈中心
+                </button>
+                <button onclick="switchTeacherTab('analysis')" id="tTabBtnAnalysis" class="t-tab-btn flex-1 min-w-[120px] py-2.5 px-4 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-chart-line"></i> 成绩登记与班级分析
+                </button>
+            </div>
+
+            <!-- TAB 1: SOP WORKSTATION (Class-Based Batch Processing) -->
+            <div id="tTabSop" class="space-y-6">
+
+                <!-- Stepper Progress Header -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fas fa-clipboard-check text-sage-600"></i> 每日教学流程 (SOP) 登记
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">按班级高效批量登记学生考勤、日常作业与附加任务</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-sage-100 text-sage-700">当前教师：张老师 (三年级1班、三年级2班)</span>
+                        </div>
+                    </div>
+
+                    <!-- Steps Bar -->
+                    <div class="grid grid-cols-3 gap-2 sm:gap-4">
+                        <div id="sopStepIndicator1" onclick="jumpSopStep(1)" class="cursor-pointer p-3 rounded-xl border border-sage-500 bg-sage-50/80 text-sage-800 flex items-center gap-3 transition">
+                            <div class="w-7 h-7 rounded-full bg-sage-600 text-white flex items-center justify-center font-bold text-xs shrink-0">1</div>
+                            <div class="hidden sm:block">
+                                <div class="text-xs font-bold">1. 学生考勤</div>
+                                <div class="text-[11px] text-slate-500">按班级打卡/考勤登记</div>
+                            </div>
+                        </div>
+                        <div id="sopStepIndicator2" onclick="jumpSopStep(2)" class="cursor-pointer p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 flex items-center gap-3 transition">
+                            <div class="w-7 h-7 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">2</div>
+                            <div class="hidden sm:block">
+                                <div class="text-xs font-bold">2. 班级日常作业</div>
+                                <div class="text-[11px] text-slate-500">按班级统一批量同步</div>
+                            </div>
+                        </div>
+                        <div id="sopStepIndicator3" onclick="jumpSopStep(3)" class="cursor-pointer p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 flex items-center gap-3 transition">
+                            <div class="w-7 h-7 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">3</div>
+                            <div class="hidden sm:block">
+                                <div class="text-xs font-bold">3. 附加任务与检查</div>
+                                <div class="text-[11px] text-slate-500">个人细化调整/完成标注</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 1 CONTENT: Attendance Categorized by Class -->
+                <div id="sopStepPanel1" class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fas fa-user-check text-sage-600"></i> ① 班级学生考勤打卡 (内部登记)
+                        </h3>
+                        <span class="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
+                            <i class="fas fa-info-circle mr-1"></i> 考勤数据仅供教师内部存档，不显示在给家长的反馈中
+                        </span>
+                    </div>
+
+                    <div id="sopAttendanceClassContainer" class="space-y-6">
+                        <!-- Dynamic rendered class attendance sections -->
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex justify-end">
+                        <button onclick="jumpSopStep(2)" class="px-6 py-2.5 bg-sage-600 hover:bg-sage-700 text-white rounded-xl text-sm font-semibold transition shadow-sm flex items-center gap-2">
+                            下一步：登记班级日常作业 <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STEP 2 CONTENT: Batch Assign Class Homework -->
+                <div id="sopStepPanel2" class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6 hidden">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fas fa-edit text-sage-600"></i> ② 按班级统一录入日常作业
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-0.5">在此处录入后提交，系统将**自动批量派发**至所选班级下的所有学生！</p>
+                        </div>
+                    </div>
+
+                    <!-- Homework Creator Form -->
+                    <div class="bg-sage-50/70 border border-sage-200 rounded-2xl p-5 space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">选择目标班级 <span class="text-rose-500">*</span></label>
+                                <select id="batchHomeworkClassSelect" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-sage-500 outline-none">
+                                    <option value="三年级1班">三年级1班</option>
+                                    <option value="三年级2班">三年级2班</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">设置默认状态</label>
+                                <select id="batchHomeworkDefaultStatus" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-sage-500 outline-none">
+                                    <option value="未完成">未完成</option>
+                                    <option value="处理中">处理中</option>
+                                    <option value="已完成">已完成</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="applyBatchClassHomework()" class="w-full py-2 bg-sage-600 hover:bg-sage-700 text-white font-semibold rounded-xl text-sm transition shadow-sm flex items-center justify-center gap-2">
+                                    <i class="fas fa-sync-alt"></i> 批量派发同步至全班学生
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 pt-2">
+                            <label class="block text-xs font-bold text-slate-700">各科布置作业清单 (可添加多项)：</label>
+                            
+                            <!-- Homework Item Templates -->
+                            <div id="batchHomeworkItemsList" class="space-y-2">
+                                <div class="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
+                                    <select class="hw-subject-input bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold w-28">
+                                        <option value="语文">语文</option>
+                                        <option value="数学">数学</option>
+                                        <option value="英语">英语</option>
+                                    </select>
+                                    <input type="text" class="hw-title-input flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-2 focus:ring-sage-500 outline-none" placeholder="例如：背诵古诗《静夜思》与抄写生字" value="课后作业一：课文第12页生字抄写2遍">
+                                    <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-rose-500 px-2 py-1"><i class="fas fa-trash"></i></button>
+                                </div>
+                                <div class="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
+                                    <select class="hw-subject-input bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold w-28">
+                                        <option value="数学">数学</option>
+                                        <option value="语文">语文</option>
+                                        <option value="英语">英语</option>
+                                    </select>
+                                    <input type="text" class="hw-title-input flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-2 focus:ring-sage-500 outline-none" placeholder="例如：完成练习册第20页" value="数学口算卡练习1张 (第15页)">
+                                    <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-rose-500 px-2 py-1"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </div>
+
+                            <button onclick="addBatchHomeworkRow()" class="text-xs font-semibold text-sage-600 hover:text-sage-800 flex items-center gap-1 mt-2">
+                                <i class="fas fa-plus-circle"></i> 添加一项作业科目
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Sync Status Preview Card -->
+                    <div class="border border-slate-200 rounded-2xl p-4 bg-slate-50/50">
+                        <h4 class="text-xs font-bold text-slate-700 mb-3 flex items-center gap-2">
+                            <i class="fas fa-users-cog text-sage-600"></i> 当前各班作业同步概览
+                        </h4>
+                        <div id="classHomeworkStatusOverview" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Rendered JS -->
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex justify-between">
+                        <button onclick="jumpSopStep(1)" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition">
+                            <i class="fas fa-arrow-left"></i> 上一步
+                        </button>
+                        <button onclick="jumpSopStep(3)" class="px-6 py-2.5 bg-sage-600 hover:bg-sage-700 text-white rounded-xl text-sm font-semibold transition shadow-sm flex items-center gap-2">
+                            下一步：个别微调与附加任务 <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STEP 3 CONTENT: Homework Fine-tuning & Additional Tasks -->
+                <div id="sopStepPanel3" class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6 hidden">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fas fa-tasks text-sage-600"></i> ③ 学生个人作业微调 & 附加任务明细
+                            </h3>
+                            <p class="text-xs text-slate-500">此步骤可针对每个学生的作业完成情况添加详细备注或增减附加任务（如书法、阅读等）</p>
+                        </div>
+                        <div>
+                            <select id="sopStep3ClassFilter" onchange="renderSopStep3()" class="bg-slate-100 border border-slate-200 text-xs font-semibold rounded-lg px-3 py-1.5 outline-none">
+                                <option value="ALL">显示全部班级</option>
+                                <option value="三年级1班">三年级1班</option>
+                                <option value="三年级2班">三年级2班</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="sopStudentTasksContainer" class="space-y-4">
+                        <!-- Dynamic Student Cards with Homework & Additional Tasks -->
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex justify-between">
+                        <button onclick="jumpSopStep(2)" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition">
+                            <i class="fas fa-arrow-left"></i> 上一步
+                        </button>
+                        <button onclick="finishSOPAndGoToFeedback()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition shadow-sm flex items-center gap-2">
+                            <i class="fas fa-check-circle"></i> 完成登记并一键生成家长反馈
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- TAB 2: PARENT FEEDBACK CENTER -->
+            <div id="tTabFeedback" class="space-y-6 hidden">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fas fa-paper-plane text-sage-600"></i> 家长每日学习情况反馈中心
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">标准格式排版，已排除考勤展示，支持一键复制与状态标记</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="batchGenerateAllFeedback()" class="px-4 py-2 bg-sage-600 hover:bg-sage-700 text-white text-xs font-bold rounded-xl transition shadow-sm flex items-center gap-1.5">
+                                <i class="fas fa-magic"></i> 一键重新生成全员反馈
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filter Bar & Color Legend -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200/60 mb-6">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-slate-600">筛选班级：</span>
+                            <select id="feedbackClassFilter" onchange="renderTeacherFeedbackList()" class="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-medium outline-none">
+                                <option value="ALL">全部班级</option>
+                                <option value="三年级1班">三年级1班</option>
+                                <option value="三年级2班">三年级2班</option>
+                            </select>
+                        </div>
+
+                        <!-- Enhanced Feedback Status Color Legend -->
+                        <div class="flex flex-wrap items-center gap-3 text-xs">
+                            <span class="font-bold text-slate-600">状态图例：</span>
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold border border-slate-300">
+                                <span class="w-2 h-2 rounded-full bg-slate-400"></span> 未生成
+                            </span>
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold border border-amber-300">
+                                <span class="w-2 h-2 rounded-full bg-amber-500"></span> 已生成
+                            </span>
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 font-bold border border-teal-300">
+                                <span class="w-2 h-2 rounded-full bg-teal-500"></span> 已复制
+                            </span>
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-300">
+                                <span class="w-2 h-2 rounded-full bg-emerald-600"></span> 已发送
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Student Feedback Cards Grid -->
+                    <div id="teacherFeedbackCardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+                        <!-- Dynamic Cards -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: GRADE REGISTRATION & CLASS ANALYSIS -->
+            <div id="tTabAnalysis" class="space-y-6 hidden">
+
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fas fa-chart-bar text-sage-600"></i> 成绩登记与班级整体趋势分析
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">系统将自动整合同一班级名下学生的成绩，生成班级均分与对比诊断图表</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-bold text-slate-600">分析目标班级：</label>
+                            <select id="analysisClassSelect" onchange="renderGradeAnalysisView()" class="bg-slate-100 border border-slate-300 font-bold rounded-xl px-3 py-1.5 text-xs text-slate-700 outline-none">
+                                <option value="三年级1班">三年级1班</option>
+                                <option value="三年级2班">三年级2班</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Class Summary KPI Badges -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div class="bg-sage-50 border border-sage-200 rounded-2xl p-4 text-center">
+                            <div class="text-xs font-semibold text-slate-500">班级参考人数</div>
+                            <div id="kpiStudentCount" class="text-2xl font-black text-sage-700 mt-1">0 人</div>
+                        </div>
+                        <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-center">
+                            <div class="text-xs font-semibold text-slate-500">语文平均分</div>
+                            <div id="kpiChineseAvg" class="text-2xl font-black text-blue-700 mt-1">0</div>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
+                            <div class="text-xs font-semibold text-slate-500">数学平均分</div>
+                            <div id="kpiMathAvg" class="text-2xl font-black text-amber-700 mt-1">0</div>
+                        </div>
+                        <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-center">
+                            <div class="text-xs font-semibold text-slate-500">英语平均分</div>
+                            <div id="kpiEnglishAvg" class="text-2xl font-black text-emerald-700 mt-1">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Visual Comparison Chart & Grade Registration Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Left Chart Component -->
+                        <div class="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between">
+                            <h3 class="text-xs font-bold text-slate-700 mb-2 flex items-center justify-between">
+                                <span><i class="fas fa-chart-column text-sage-600 mr-1.5"></i> 班级学生各科成绩分布对比图</span>
+                                <span class="text-[11px] font-normal text-slate-400">（最近一次单元测验）</span>
+                            </h3>
+                            <div class="relative w-full h-64">
+                                <canvas id="classGradeChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Right Grade Registration Table -->
+                        <div class="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-slate-700">
+                                    <i class="fas fa-pen-square text-sage-600 mr-1.5"></i> 班级学生成绩登记表
+                                </h3>
+                                <button onclick="saveAllGrades()" class="px-3 py-1 bg-sage-600 hover:bg-sage-700 text-white rounded-lg text-xs font-bold transition">
+                                    <i class="fas fa-save mr-1"></i> 保存成绩修改
+                                </button>
+                            </div>
+
+                            <div class="overflow-x-auto custom-scrollbar max-h-60">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-slate-200/60 text-slate-700 sticky top-0">
+                                        <tr>
+                                            <th class="p-2">学生姓名</th>
+                                            <th class="p-2">语文</th>
+                                            <th class="p-2">数学</th>
+                                            <th class="p-2">英语</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="gradeRegistrationTableBody" class="divide-y divide-slate-200 bg-white">
+                                        <!-- Dynamic JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- =================================================================== -->
+        <!--                             校长端 View                            -->
+        <!-- =================================================================== -->
+        <div id="principalView" class="space-y-6 hidden">
+
+            <!-- Sub Nav Navigation Tabs for Principal -->
+            <div class="bg-white p-2 rounded-2xl border border-slate-200/80 shadow-sm flex flex-wrap gap-2">
+                <button onclick="switchPrincipalTab('hub')" id="pTabBtnHub" class="p-tab-btn flex-1 min-w-[120px] py-2.5 px-4 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 bg-sage-600 text-white shadow-sm">
+                    <i class="fas fa-layer-group"></i> 全校教师教学汇总中心
+                </button>
+                <button onclick="switchPrincipalTab('students')" id="pTabBtnStudents" class="p-tab-btn flex-1 min-w-[120px] py-2.5 px-4 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-user-graduate"></i> 学生档案管理与教师分配
+                </button>
+                <button onclick="switchPrincipalTab('teachers')" id="pTabBtnTeachers" class="p-tab-btn flex-1 min-w-[120px] py-2.5 px-4 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-chalkboard-teacher"></i> 教师管理 & 教师考勤
+                </button>
+            </div>
+
+            <!-- TAB 1: TEACHER HUB (Replaces SOP) -->
+            <div id="pTabHub" class="space-y-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fas fa-th-large text-sage-600"></i> 全校教师教学数据实时汇总中心
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">校长调阅面板：同步展示全校考勤、日常与附加作业、成绩统计及家长反馈文本</p>
+                        </div>
+
+                        <!-- Class & Teacher Filter for Principal Hub -->
+                        <div class="flex items-center gap-3">
+                            <select id="principalHubClassFilter" onchange="renderPrincipalHub()" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-700 outline-none">
+                                <option value="ALL">全校所有班级</option>
+                                <option value="三年级1班">三年级1班</option>
+                                <option value="三年级2班">三年级2班</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Overview Metrics Row -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                            <div class="text-xs font-bold text-slate-500">全校今日出勤率</div>
+                            <div id="pHubAttendanceRate" class="text-2xl font-black text-sage-700 mt-1">0%</div>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                            <div class="text-xs font-bold text-slate-500">日常作业完成率</div>
+                            <div id="pHubHomeworkRate" class="text-2xl font-black text-blue-700 mt-1">0%</div>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                            <div class="text-xs font-bold text-slate-500">附加任务完成率</div>
+                            <div id="pHubExtraRate" class="text-2xl font-black text-purple-700 mt-1">0%</div>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                            <div class="text-xs font-bold text-slate-500">家长反馈发送进度</div>
+                            <div id="pHubFeedbackRate" class="text-2xl font-black text-emerald-700 mt-1">0%</div>
+                        </div>
+                    </div>
+
+                    <!-- Consolidated Student Detail Cards -->
+                    <div class="space-y-4">
+                        <h3 class="text-sm font-bold text-slate-700 flex items-center justify-between">
+                            <span><i class="fas fa-list-ul text-sage-600 mr-1.5"></i> 学生教学汇总档案明细</span>
+                            <span class="text-xs font-normal text-slate-400">同步实时更新</span>
+                        </h3>
+
+                        <div id="principalHubStudentsList" class="space-y-4">
+                            <!-- Dynamic Cards rendered via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: STUDENT ARCHIVES & TEACHER ASSIGNMENT -->
+            <div id="pTabStudents" class="space-y-6 hidden">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fas fa-id-card text-sage-600"></i> 学生档案管理与负责教师分配
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">校长可灵活划分学生班级，并指定、更换或解绑负责教师</p>
+                        </div>
+                        <button onclick="openAddStudentModal()" class="px-4 py-2 bg-sage-600 hover:bg-sage-700 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5">
+                            <i class="fas fa-user-plus"></i> 新增学生档案
+                        </button>
+                    </div>
+
+                    <!-- Table List -->
+                    <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-slate-700 font-bold">
+                                <tr>
+                                    <th class="p-3.5">学号 / 姓名</th>
+                                    <th class="p-3.5">所属班级</th>
+                                    <th class="p-3.5">家长联系电话</th>
+                                    <th class="p-3.5">当前负责教师</th>
+                                    <th class="p-3.5 text-center">操作与教师调配</th>
+                                </tr>
+                            </thead>
+                            <tbody id="principalStudentTableBody" class="divide-y divide-slate-200 bg-white">
+                                <!-- Dynamic rendered -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: TEACHER MANAGEMENT & TEACHER ATTENDANCE -->
+            <div id="pTabTeachers" class="space-y-6 hidden">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fas fa-chalkboard-teacher text-sage-600"></i> 全校教师档案与考勤管理
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">教师默认显示“正常全勤”，如遇请假/出差，校长可点击修改考勤记录</p>
+                        </div>
+                        <button onclick="openAddTeacherModal()" class="px-4 py-2 bg-sage-600 hover:bg-sage-700 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5">
+                            <i class="fas fa-plus-circle"></i> 录入新教师
+                        </button>
+                    </div>
+
+                    <!-- Teacher List & Attendance Table -->
+                    <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-slate-700 font-bold">
+                                <tr>
+                                    <th class="p-3.5">教师姓名</th>
+                                    <th class="p-3.5">联系电话</th>
+                                    <th class="p-3.5">负责班级/带班学生</th>
+                                    <th class="p-3.5">今日教师考勤状态</th>
+                                    <th class="p-3.5 text-center">考勤变更与操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="principalTeacherTableBody" class="divide-y divide-slate-200 bg-white">
+                                <!-- Dynamic JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 mt-auto py-4 text-center text-xs text-slate-400">
+        <div class="max-w-7xl mx-auto px-4">
+            童学 · 教学管理系统 &copy; 2026 版权所有 | 绿色低饱和度简约教务平台
+        </div>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        /* ===================================================================
+           1. GLOBAL STATE & DATA MOCK
+           =================================================================== */
+        const STORAGE_KEY = 'TONGXUE_SYSTEM_STATE_2026_V2';
+
+        // Initial Data Structure
+        const defaultState = {
+            currentRole: 'teacher', // 'teacher' | 'principal'
+            semesterConfig: {
+                currentMode: 'fall_2026', // 'fall_2026', 'spring_2027', 'vacation'
+                customWeek: 7,
+                startDate: '2026-09-01'
+            },
+            teachers: [
+                { id: 'T101', name: '张老师', phone: '13800138001', classes: ['三年级1班', '三年级2班'], attendance: '全勤', leaveReason: '' },
+                { id: 'T102', name: '李老师', phone: '13900139002', classes: ['四年级1班'], attendance: '全勤', leaveReason: '' },
+                { id: 'T103', name: '王老师', phone: '13700137003', classes: ['五年级1班'], attendance: '病假', leaveReason: '发烧请假一天' }
+            ],
+            students: [
+                { id: 'S101', name: '张小明', rawName: '小明', gender: '男', className: '三年级1班', teacherId: 'T101', parentPhone: '13811112222', motherName: '小明妈妈' },
+                { id: 'S102', name: '李华', rawName: '华', gender: '男', className: '三年级1班', teacherId: 'T101', parentPhone: '13822223333', motherName: '华妈妈' },
+                { id: 'S103', name: '王雪', rawName: '雪', gender: '女', className: '三年级1班', teacherId: 'T101', parentPhone: '13833334444', motherName: '雪妈妈' },
+                { id: 'S104', name: '赵强', rawName: '强', gender: '男', className: '三年级2班', teacherId: 'T101', parentPhone: '13844445555', motherName: '强妈妈' },
+                { id: 'S105', name: '陈晨', rawName: '晨', gender: '女', className: '三年级2班', teacherId: 'T101', parentPhone: '13855556666', motherName: '晨妈妈' }
+            ],
+            // Daily Records keyed by Student ID
+            dailyData: {
+                'S101': {
+                    attendance: '出勤', // '出勤', '请假', '迟到'
+                    attendanceNote: '正常准时到校',
+                    homework: [
+                        { id: 'hw1', subject: '语文', title: '作业一：抄写生字与词语', status: '已完成', note: '字迹工整优美' },
+                        { id: 'hw2', subject: '语文', title: '作业二：背诵古诗《静夜思》', status: '已完成', note: '朗读流畅富有情感' },
+                        { id: 'hw3', subject: '数学', title: '作业一：完成练习册第15页', status: '已完成', note: '全对无错漏' }
+                    ],
+                    extraTasks: [
+                        { id: 'ex1', subject: '附加', title: '硬笔书法练习1页', status: '已完成', note: '笔画很有进步' }
+                    ],
+                    grades: { chinese: 95, math: 98, english: 92 },
+                    feedbackText: '',
+                    feedbackStatus: '已生成' // '未生成', '已生成', '已复制', '已发送'
+                },
+                'S102': {
+                    attendance: '出勤',
+                    attendanceNote: '',
+                    homework: [
+                        { id: 'hw1', subject: '语文', title: '作业一：抄写生字与词语', status: '已完成', note: '按时完成' },
+                        { id: 'hw2', subject: '语文', title: '作业二：背诵古诗《静夜思》', status: '处理中', note: '稍逊熟练，建议回家多复习' },
+                        { id: 'hw3', subject: '数学', title: '作业一：完成练习册第15页', status: '已完成', note: '订正了1道错题' }
+                    ],
+                    extraTasks: [
+                        { id: 'ex1', subject: '附加', title: '课外阅读15分钟', status: '已完成', note: '非常专注' }
+                    ],
+                    grades: { chinese: 88, math: 91, english: 85 },
+                    feedbackText: '',
+                    feedbackStatus: '已生成'
+                },
+                'S103': {
+                    attendance: '出勤',
+                    attendanceNote: '',
+                    homework: [
+                        { id: 'hw1', subject: '语文', title: '作业一：抄写生字与词语', status: '未完成', note: '补写中' },
+                        { id: 'hw2', subject: '数学', title: '作业一：完成练习册第15页', status: '已完成', note: '表现良好' }
+                    ],
+                    extraTasks: [],
+                    grades: { chinese: 90, math: 94, english: 96 },
+                    feedbackText: '',
+                    feedbackStatus: '未生成'
+                },
+                'S104': {
+                    attendance: '出勤',
+                    attendanceNote: '',
+                    homework: [
+                        { id: 'hw1', subject: '语文', title: '课后作业一：课文生字抄写', status: '已完成', note: '完成良好' },
+                        { id: 'hw2', subject: '数学', title: '数学口算卡练习1张', status: '已完成', note: '速度很快' }
+                    ],
+                    extraTasks: [],
+                    grades: { chinese: 82, math: 89, english: 80 },
+                    feedbackText: '',
+                    feedbackStatus: '未生成'
+                },
+                'S105': {
+                    attendance: '请假',
+                    attendanceNote: '身体不适请假',
+                    homework: [],
+                    extraTasks: [],
+                    grades: { chinese: 93, math: 95, english: 97 },
+                    feedbackText: '',
+                    feedbackStatus: '未生成'
+                }
+            }
+        };
+
+        let appState = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultState;
+
+        function saveState() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+        }
+
+        /* ===================================================================
+           2. HELPER FUNCTIONS & TOAST
+           =================================================================== */
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            const msgEl = document.getElementById('toastMsg');
+
+            msgEl.textContent = msg;
+            if (type === 'success') {
+                icon.className = 'fas fa-check-circle text-emerald-400 text-lg';
+            } else if (type === 'error') {
+                icon.className = 'fas fa-exclamation-circle text-rose-400 text-lg';
+            } else {
+                icon.className = 'fas fa-info-circle text-blue-400 text-lg';
+            }
+
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-[-100px]', 'opacity-0');
+            }, 3000);
+        }
+
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast('已成功复制家长反馈文本到剪贴板！');
+        }
+
+        /* ===================================================================
+           3. SEMESTER & DATE COMPUTATION
+           =================================================================== */
+        function initSemesterHeader() {
+            const dateEl = document.getElementById('headerTodayDate');
+            const semBadge = document.getElementById('headerSemesterBadge');
+            const weekBadge = document.getElementById('headerWeekBadge');
+            const mobBadge = document.getElementById('mobileWeekBadge');
+
+            const now = new Date();
+            dateEl.textContent = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
+
+            const mode = appState.semesterConfig.currentMode;
+            if (mode === 'fall_2026') {
+                semBadge.textContent = '2026秋季学期';
+                weekBadge.textContent = `第 ${appState.semesterConfig.customWeek} 周`;
+                mobBadge.textContent = `秋季 第${appState.semesterConfig.customWeek}周`;
+            } else if (mode === 'spring_2027') {
+                semBadge.textContent = '2027春季学期';
+                weekBadge.textContent = `第 ${appState.semesterConfig.customWeek} 周`;
+                mobBadge.textContent = `春季 第${appState.semesterConfig.customWeek}周`;
+            } else {
+                semBadge.textContent = '寒暑假假期中';
+                weekBadge.textContent = '假期模式';
+                mobBadge.textContent = '假期模式';
+            }
+        }
+
+        function openSemesterSettingsModal() {
+            const content = `
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-bold text-slate-800"><i class="fas fa-calendar-alt text-sage-600 mr-2"></i>学期与周次状态设置</h3>
+                        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">系统当前学期/假期模式</label>
+                            <select id="modalSemMode" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium outline-none">
+                                <option value="fall_2026" ${appState.semesterConfig.currentMode === 'fall_2026' ? 'selected' : ''}>2026秋季学期 (2026.09.01 - 2027.01.23, 共21周)</option>
+                                <option value="spring_2027" ${appState.semesterConfig.currentMode === 'spring_2027' ? 'selected' : ''}>2027春季学期 (2027.02.22 - 2027.07.10, 共20周)</option>
+                                <option value="vacation" ${appState.semesterConfig.currentMode === 'vacation' ? 'selected' : ''}>寒暑假假期模式</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">设定当前为第几周 (1-21周)</label>
+                            <input type="number" id="modalSemWeek" min="1" max="25" value="${appState.semesterConfig.customWeek}" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium outline-none">
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                        <button onclick="closeModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs">取消</button>
+                        <button onclick="saveSemesterSettings()" class="px-4 py-2 bg-sage-600 text-white rounded-xl font-bold text-xs hover:bg-sage-700">保存设置</button>
+                    </div>
+                </div>
+            `;
+            showModal(content);
+        }
+
+        function saveSemesterSettings() {
+            appState.semesterConfig.currentMode = document.getElementById('modalSemMode').value;
+            appState.semesterConfig.customWeek = parseInt(document.getElementById('modalSemWeek').value) || 1;
+            saveState();
+            initSemesterHeader();
+            closeModal();
+            showToast('学期状态设置成功！');
+        }
+
+        /* ===================================================================
+           4. ROLE & TAB SWITCHING
+           =================================================================== */
+        function switchRole(role) {
+            appState.currentRole = role;
+            saveState();
+
+            const teacherBtn = document.getElementById('roleBtnTeacher');
+            const principalBtn = document.getElementById('roleBtnPrincipal');
+            const teacherView = document.getElementById('teacherView');
+            const principalView = document.getElementById('principalView');
+
+            if (role === 'teacher') {
+                teacherBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-sage-600 text-white shadow-sm flex items-center gap-1.5';
+                principalBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5';
+                teacherView.classList.remove('hidden');
+                principalView.classList.add('hidden');
+                renderTeacherSOP();
+            } else {
+                principalBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-sage-600 text-white shadow-sm flex items-center gap-1.5';
+                teacherBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5';
+                principalView.classList.remove('hidden');
+                teacherView.classList.add('hidden');
+                renderPrincipalHub();
+            }
+        }
+
+        function switchTeacherTab(tabName) {
+            ['sop', 'feedback', 'analysis'].forEach(t => {
+                const btn = document.getElementById(`tTabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                const panel = document.getElementById(`tTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                if (t === tabName) {
+                    btn.className = 't-tab-btn flex-1 min-w-[120px] py-2.5 px-4 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 bg-sage-600 text-white shadow-sm';
+                    panel.classList.remove('hidden');
+                } else {
+                    btn.className = 't-tab-btn flex-1 min-w-[120px] py-2.5 px-4 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition flex items-center justify-center gap-2';
+                    panel.classList.add('hidden');
+                }
+            });
+
+            if (tabName === 'feedback') renderTeacherFeedbackList();
+            if (tabName === 'analysis') renderGradeAnalysisView();
+        }
+
+        function switchPrincipalTab(tabName) {
+            ['hub', 'students', 'teachers'].forEach(t => {
+                const btn = document.getElementById(`pTabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                const panel = document.getElementById(`pTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                if (t === tabName) {
+                    btn.className = 'p-tab-btn flex-1 min-w-[120px] py-2.5 px-4 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 bg-sage-600 text-white shadow-sm';
+                    panel.classList.remove('hidden');
+                } else {
+                    btn.className = 'p-tab-btn flex-1 min-w-[120px] py-2.5 px-4 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition flex items-center justify-center gap-2';
+                    panel.classList.add('hidden');
+                }
+            });
+
+            if (tabName === 'hub') renderPrincipalHub();
+            if (tabName === 'students') renderPrincipalStudentsList();
+            if (tabName === 'teachers') renderPrincipalTeachersList();
+        }
+
+        /* ===================================================================
+           5. TEACHER SOP WORKSTATION
+           =================================================================== */
+        let currentSopStep = 1;
+
+        function jumpSopStep(step) {
+            currentSopStep = step;
+            [1, 2, 3].forEach(s => {
+                const indicator = document.getElementById(`sopStepIndicator${s}`);
+                const panel = document.getElementById(`sopStepPanel${s}`);
+
+                if (s === step) {
+                    indicator.className = 'cursor-pointer p-3 rounded-xl border border-sage-500 bg-sage-50/80 text-sage-800 flex items-center gap-3 transition shadow-sm';
+                    panel.classList.remove('hidden');
+                } else {
+                    indicator.className = 'cursor-pointer p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 flex items-center gap-3 transition opacity-70';
+                    panel.classList.add('hidden');
+                }
+            });
+
+            if (step === 1) renderSopStep1();
+            if (step === 2) renderSopStep2();
+            if (step === 3) renderSopStep3();
+        }
+
+        function renderTeacherSOP() {
+            jumpSopStep(1);
+        }
+
+        // STEP 1: Class-Categorized Attendance
+        function renderSopStep1() {
+            const container = document.getElementById('sopAttendanceClassContainer');
+            container.innerHTML = '';
+
+            // Group students by Class
+            const classes = ['三年级1班', '三年级2班'];
+            classes.forEach(cName => {
+                const classStudents = appState.students.filter(s => s.className === cName);
+                if (classStudents.length === 0) return;
+
+                const classBox = document.createElement('div');
+                classBox.className = 'border border-slate-200 rounded-2xl p-4 bg-slate-50/50 space-y-3';
+                
+                let studentsHtml = '';
+                classStudents.forEach(st => {
+                    const record = appState.dailyData[st.id] || { attendance: '出勤', attendanceNote: '' };
+                    studentsHtml += `
+                        <div class="bg-white p-3 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-full bg-sage-100 text-sage-700 font-bold flex items-center justify-center text-xs">
+                                    ${st.name.slice(-2)}
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-slate-800">${st.name}</div>
+                                    <div class="text-[11px] text-slate-400">学号: ${st.id}</div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2 w-full sm:w-auto">
+                                <select onchange="updateStudentAttendance('${st.id}', this.value)" class="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-semibold outline-none">
+                                    <option value="出勤" ${record.attendance === '出勤' ? 'selected' : ''}>🟢 出勤</option>
+                                    <option value="迟到" ${record.attendance === '迟到' ? 'selected' : ''}>🟡 迟到</option>
+                                    <option value="请假" ${record.attendance === '请假' ? 'selected' : ''}>🔴 请假</option>
+                                </select>
+                                <input type="text" value="${record.attendanceNote || ''}" onchange="updateStudentAttendanceNote('${st.id}', this.value)" placeholder="考勤内部备注..." class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs flex-1 sm:w-40 outline-none">
+                            </div>
+                        </div>
+                    `;
+                });
+
+                classBox.innerHTML = `
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-users text-sage-600"></i>
+                            <span class="text-sm font-bold text-slate-800">${cName}</span>
+                            <span class="text-xs bg-sage-100 text-sage-700 px-2 py-0.5 rounded-full font-medium">共 ${classStudents.length} 人</span>
+                        </div>
+                        <button onclick="markClassAllPresent('${cName}')" class="text-xs text-sage-700 hover:text-sage-900 bg-white border border-sage-300 px-3 py-1 rounded-lg font-bold shadow-sm hover:bg-sage-50 transition">
+                            <i class="fas fa-check-double text-emerald-600 mr-1"></i> 一键全到打卡
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                        ${studentsHtml}
+                    </div>
+                `;
+                container.appendChild(classBox);
+            });
+        }
+
+        function updateStudentAttendance(stId, val) {
+            if (!appState.dailyData[stId]) appState.dailyData[stId] = {};
+            appState.dailyData[stId].attendance = val;
+            saveState();
+        }
+
+        function updateStudentAttendanceNote(stId, val) {
+            if (!appState.dailyData[stId]) appState.dailyData[stId] = {};
+            appState.dailyData[stId].attendanceNote = val;
+            saveState();
+        }
+
+        function markClassAllPresent(cName) {
+            appState.students.filter(s => s.className === cName).forEach(st => {
+                if (!appState.dailyData[st.id]) appState.dailyData[st.id] = {};
+                appState.dailyData[st.id].attendance = '出勤';
+            });
+            saveState();
+            renderSopStep1();
+            showToast(`已成功将【${cName}】所有学生标记为正常出勤！`);
+        }
+
+        // STEP 2: Batch Homework Creation
+        function addBatchHomeworkRow() {
+            const list = document.getElementById('batchHomeworkItemsList');
+            const div = document.createElement('div');
+            div.className = 'flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200';
+            div.innerHTML = `
+                <select class="hw-subject-input bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold w-28">
+                    <option value="语文">语文</option>
+                    <option value="数学">数学</option>
+                    <option value="英语">英语</option>
+                    <option value="科学">科学</option>
+                </select>
+                <input type="text" class="hw-title-input flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-2 focus:ring-sage-500 outline-none" placeholder="输入作业名称/要求...">
+                <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-rose-500 px-2 py-1"><i class="fas fa-trash"></i></button>
+            `;
+            list.appendChild(div);
+        }
+
+        function applyBatchClassHomework() {
+            const targetClass = document.getElementById('batchHomeworkClassSelect').value;
+            const defaultStatus = document.getElementById('batchHomeworkDefaultStatus').value;
+            
+            const rows = document.querySelectorAll('#batchHomeworkItemsList > div');
+            const homeworkItems = [];
+
+            rows.forEach((row, index) => {
+                const subject = row.querySelector('.hw-subject-input').value;
+                const title = row.querySelector('.hw-title-input').value.trim();
+                if (title) {
+                    homeworkItems.push({
+                        id: 'hw_' + Date.now() + '_' + index,
+                        subject: subject,
+                        title: title,
+                        status: defaultStatus,
+                        note: ''
+                    });
+                }
+            });
+
+            if (homeworkItems.length === 0) {
+                showToast('请至少输入一项作业名称！', 'error');
+                return;
+            }
+
+            // Sync to all students in target class
+            const targetStudents = appState.students.filter(s => s.className === targetClass);
+            targetStudents.forEach(st => {
+                if (!appState.dailyData[st.id]) appState.dailyData[st.id] = {};
+                // Overwrite or update homework array
+                appState.dailyData[st.id].homework = JSON.parse(JSON.stringify(homeworkItems));
+            });
+
+            saveState();
+            renderSopStep2();
+            showToast(`已成功将 ${homeworkItems.length} 项作业同步派发给【${targetClass}】共 ${targetStudents.length} 名学生！`);
+        }
+
+        function renderSopStep2() {
+            const overview = document.getElementById('classHomeworkStatusOverview');
+            overview.innerHTML = '';
+
+            ['三年级1班', '三年级2班'].forEach(cName => {
+                const students = appState.students.filter(s => s.className === cName);
+                if (students.length === 0) return;
+
+                // Take sample student
+                const sampleSt = students[0];
+                const sampleHw = (appState.dailyData[sampleSt.id] && appState.dailyData[sampleSt.id].homework) || [];
+
+                let hwBadgeList = '';
+                if (sampleHw.length === 0) {
+                    hwBadgeList = `<span class="text-xs text-slate-400 italic">暂未录入班级作业</span>`;
+                } else {
+                    sampleHw.forEach((h, i) => {
+                        hwBadgeList += `
+                            <div class="text-xs bg-white border border-slate-200 p-2 rounded-lg flex items-center justify-between">
+                                <span><strong class="text-sage-700">[${h.subject}]</strong> ${h.title}</span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 font-semibold">${h.status}</span>
+                            </div>
+                        `;
+                    });
+                }
+
+                const card = document.createElement('div');
+                card.className = 'bg-white p-3.5 rounded-xl border border-slate-200 space-y-2';
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-800">${cName} (同步涵盖 ${students.length} 人)</span>
+                        <span class="text-[11px] text-sage-600 font-bold">${sampleHw.length} 项布置</span>
+                    </div>
+                    <div class="space-y-1.5">
+                        ${hwBadgeList}
+                    </div>
+                `;
+                overview.appendChild(card);
+            });
+        }
+
+        // STEP 3: Individual Fine-tuning & Extra Tasks
+        function renderSopStep3() {
+            const classFilter = document.getElementById('sopStep3ClassFilter').value;
+            const container = document.getElementById('sopStudentTasksContainer');
+            container.innerHTML = '';
+
+            let filteredStudents = appState.students;
+            if (classFilter !== 'ALL') {
+                filteredStudents = filteredStudents.filter(s => s.className === classFilter);
+            }
+
+            filteredStudents.forEach(st => {
+                const data = appState.dailyData[st.id] || { homework: [], extraTasks: [] };
+                const homeworkList = data.homework || [];
+                const extraList = data.extraTasks || [];
+
+                const card = document.createElement('div');
+                card.className = 'bg-slate-50/80 border border-slate-200 rounded-2xl p-4 space-y-4';
+
+                // Homework list HTML for this student
+                let hwRowsHtml = '';
+                homeworkList.forEach((hw, idx) => {
+                    hwRowsHtml += `
+                        <div class="bg-white p-2.5 rounded-xl border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 text-xs">
+                            <div class="flex items-center gap-2 flex-1">
+                                <span class="font-bold text-sage-700 bg-sage-50 px-2 py-0.5 rounded border border-sage-200">${hw.subject}</span>
+                                <span class="font-medium text-slate-800">${hw.title}</span>
+                            </div>
+                            <div class="flex items-center gap-2 w-full md:w-auto">
+                                <select onchange="updateStudentHwStatus('${st.id}', ${idx}, this.value)" class="bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-xs outline-none">
+                                    <option value="未完成" ${hw.status === '未完成' ? 'selected' : ''}>未完成</option>
+                                    <option value="处理中" ${hw.status === '处理中' ? 'selected' : ''}>处理中</option>
+                                    <option value="已完成" ${hw.status === '已完成' ? 'selected' : ''}>已完成</option>
+                                </select>
+                                <input type="text" value="${hw.note || ''}" onchange="updateStudentHwNote('${st.id}', ${idx}, this.value)" placeholder="针对该生备注说明..." class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs flex-1 md:w-48 outline-none">
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // Extra tasks list HTML
+                let extraRowsHtml = '';
+                extraList.forEach((ex, idx) => {
+                    extraRowsHtml += `
+                        <div class="bg-white p-2.5 rounded-xl border border-purple-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 text-xs">
+                            <div class="flex items-center gap-2 flex-1">
+                                <span class="font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">附加</span>
+                                <span class="font-medium text-slate-800">${ex.title}</span>
+                            </div>
+                            <div class="flex items-center gap-2 w-full md:w-auto">
+                                <select onchange="updateStudentExtraStatus('${st.id}', ${idx}, this.value)" class="bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-xs outline-none">
+                                    <option value="未完成" ${ex.status === '未完成' ? 'selected' : ''}>未完成</option>
+                                    <option value="已完成" ${ex.status === '已完成' ? 'selected' : ''}>已完成</option>
+                                </select>
+                                <input type="text" value="${ex.note || ''}" onchange="updateStudentExtraNote('${st.id}', ${idx}, this.value)" placeholder="附加备注..." class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs flex-1 md:w-48 outline-none">
+                                <button onclick="deleteStudentExtraTask('${st.id}', ${idx})" class="text-slate-400 hover:text-rose-500"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-sage-600 text-white font-bold flex items-center justify-center text-xs">
+                                ${st.name.slice(-2)}
+                            </div>
+                            <div>
+                                <span class="text-sm font-bold text-slate-800">${st.name}</span>
+                                <span class="text-xs text-slate-500 ml-2">(${st.className})</span>
+                            </div>
+                        </div>
+                        <button onclick="openAddExtraTaskModal('${st.id}')" class="text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 px-3 py-1 rounded-lg font-bold transition">
+                            <i class="fas fa-plus mr-1"></i> 为其增加附加任务
+                        </button>
+                    </div>
+
+                    <div class="space-y-2">
+                        <div class="text-xs font-bold text-slate-600">日常作业明细 (${homeworkList.length} 项)：</div>
+                        ${hwRowsHtml || '<p class="text-xs text-slate-400 italic">暂无日常作业</p>'}
+                    </div>
+
+                    <div class="space-y-2 pt-2 border-t border-slate-200/60">
+                        <div class="text-xs font-bold text-purple-700">附加任务 (${extraList.length} 项)：</div>
+                        ${extraRowsHtml || '<p class="text-xs text-slate-400 italic">暂无附加任务</p>'}
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function updateStudentHwStatus(stId, idx, val) {
+            appState.dailyData[stId].homework[idx].status = val;
+            saveState();
+        }
+
+        function updateStudentHwNote(stId, idx, val) {
+            appState.dailyData[stId].homework[idx].note = val;
+            saveState();
+        }
+
+        function updateStudentExtraStatus(stId, idx, val) {
+            appState.dailyData[stId].extraTasks[idx].status = val;
+            saveState();
+        }
+
+        function updateStudentExtraNote(stId, idx, val) {
+            appState.dailyData[stId].extraTasks[idx].note = val;
+            saveState();
+        }
+
+        function deleteStudentExtraTask(stId, idx) {
+            appState.dailyData[stId].extraTasks.splice(idx, 1);
+            saveState();
+            renderSopStep3();
+        }
+
+        function openAddExtraTaskModal(stId) {
+            const st = appState.students.find(s => s.id === stId);
+            const content = `
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-bold text-slate-800"><i class="fas fa-plus-circle text-purple-600 mr-2"></i>增加附加任务 - ${st.name}</h3>
+                        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">附加任务名称</label>
+                            <input type="text" id="modalExtraTitle" placeholder="如：课外阅读15分钟 / 书法字帖练习" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">初始状态</label>
+                            <select id="modalExtraStatus" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium outline-none">
+                                <option value="未完成">未完成</option>
+                                <option value="已完成">已完成</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                        <button onclick="closeModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs">取消</button>
+                        <button onclick="saveExtraTask('${stId}')" class="px-4 py-2 bg-purple-600 text-white rounded-xl font-bold text-xs hover:bg-purple-700">添加任务</button>
+                    </div>
+                </div>
+            `;
+            showModal(content);
+        }
+
+        function saveExtraTask(stId) {
+            const title = document.getElementById('modalExtraTitle').value.trim();
+            const status = document.getElementById('modalExtraStatus').value;
+            if (!title) return;
+
+            if (!appState.dailyData[stId]) appState.dailyData[stId] = {};
+            if (!appState.dailyData[stId].extraTasks) appState.dailyData[stId].extraTasks = [];
+
+            appState.dailyData[stId].extraTasks.push({
+                id: 'ex_' + Date.now(),
+                subject: '附加',
+                title: title,
+                status: status,
+                note: ''
+            });
+
+            saveState();
+            closeModal();
+            renderSopStep3();
+            showToast('已成功增加附加任务！');
+        }
+
+        function finishSOPAndGoToFeedback() {
+            // Auto generate feedback for all
+            batchGenerateAllFeedback();
+            switchTeacherTab('feedback');
+            showToast('已完成 SOP 登记，并为您生成最新家长反馈文本！');
+        }
+
+        /* ===================================================================
+           6. PARENT FEEDBACK TEXT GENERATION (Strict Template, No Attendance)
+           =================================================================== */
+        function generateParentFeedbackText(studentId) {
+            const st = appState.students.find(s => s.id === studentId);
+            if (!st) return '';
+
+            const rawName = st.rawName || st.name.slice(-2);
+            const data = appState.dailyData[studentId] || { homework: [], extraTasks: [] };
+            const hwList = data.homework || [];
+            const extraList = data.extraTasks || [];
+
+            // Group homework by Subject
+            const subjectMap = {};
+            hwList.forEach(hw => {
+                if (!subjectMap[hw.subject]) subjectMap[hw.subject] = [];
+                subjectMap[hw.subject].push(hw);
+            });
+
+            let text = `${rawName}妈妈晚上好，这是${rawName}今天的学习情况。\n`;
+
+            // Append Subject Homeworks
+            const subjects = Object.keys(subjectMap);
+            if (subjects.length > 0) {
+                subjects.forEach(subj => {
+                    text += `${subj}：`;
+                    const items = subjectMap[subj];
+                    items.forEach((item, idx) => {
+                        const noteStr = item.note ? `·${item.note}` : '';
+                        if (idx === 0) {
+                            text += `1.${item.title}（${item.status}${noteStr}）\n`;
+                        } else {
+                            text += `2.${item.title}（${item.status}${noteStr}）\n`;
+                        }
+                    });
+                });
+            } else {
+                text += `日常作业：今日无特殊分派作业。\n`;
+            }
+
+            // Append Additional Tasks
+            if (extraList.length > 0) {
+                text += `附加：`;
+                extraList.forEach((ex, idx) => {
+                    const noteStr = ex.note ? `·${ex.note}` : '';
+                    text += `${ex.subject}：${idx + 1}.${ex.title}（${ex.status}${noteStr}）\n`;
+                });
+            }
+
+            return text.trim();
+        }
+
+        function batchGenerateAllFeedback() {
+            appState.students.forEach(st => {
+                if (!appState.dailyData[st.id]) appState.dailyData[st.id] = {};
+                appState.dailyData[st.id].feedbackText = generateParentFeedbackText(st.id);
+                if (appState.dailyData[st.id].feedbackStatus === '未生成') {
+                    appState.dailyData[st.id].feedbackStatus = '已生成';
+                }
+            });
+            saveState();
+            renderTeacherFeedbackList();
+        }
+
+        function renderTeacherFeedbackList() {
+            const classFilter = document.getElementById('feedbackClassFilter').value;
+            const container = document.getElementById('teacherFeedbackCardsContainer');
+            container.innerHTML = '';
+
+            let filteredStudents = appState.students;
+            if (classFilter !== 'ALL') {
+                filteredStudents = filteredStudents.filter(s => s.className === classFilter);
+            }
+
+            filteredStudents.forEach(st => {
+                const data = appState.dailyData[st.id] || {};
+                const fbText = data.feedbackText || generateParentFeedbackText(st.id);
+                const status = data.feedbackStatus || '已生成';
+
+                // Distinct Badge Color Schemes
+                let statusBadge = '';
+                if (status === '未生成') {
+                    statusBadge = `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-300"><i class="fas fa-circle text-[8px]"></i> 未生成</span>`;
+                } else if (status === '已生成') {
+                    statusBadge = `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-sm"><i class="fas fa-edit text-xs"></i> 已生成</span>`;
+                } else if (status === '已复制') {
+                    statusBadge = `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 border border-teal-300 shadow-sm"><i class="fas fa-copy text-xs"></i> 已复制</span>`;
+                } else if (status === '已发送') {
+                    statusBadge = `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm"><i class="fas fa-check-double text-xs"></i> 已发送</span>`;
+                }
+
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4 flex flex-col justify-between';
+
+                card.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-9 h-9 rounded-xl bg-sage-600 text-white font-bold flex items-center justify-center text-xs shadow-sm">
+                                    ${st.name.slice(-2)}
+                                </div>
+                                <div>
+                                    <div class="text-sm font-bold text-slate-800">${st.name}</div>
+                                    <div class="text-xs text-slate-400">${st.className} | 家长: ${st.motherName || '未设置'}</div>
+                                </div>
+                            </div>
+                            <div>${statusBadge}</div>
+                        </div>
+
+                        <!-- Feedback Content Textarea/Display Area -->
+                        <div class="relative">
+                            <textarea id="fbTextarea_${st.id}" onchange="updateCustomFeedbackText('${st.id}', this.value)" rows="6" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-mono text-slate-700 leading-relaxed focus:bg-white focus:ring-2 focus:ring-sage-500 outline-none resize-none custom-scrollbar">${fbText}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <button onclick="regenerateSingleFeedback('${st.id}')" class="text-xs text-slate-500 hover:text-slate-800 px-2 py-1 font-semibold">
+                            <i class="fas fa-redo-alt mr-1"></i> 重置文本
+                        </button>
+                        <div class="flex items-center gap-2">
+                            <button onclick="copyFeedbackText('${st.id}')" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center gap-1">
+                                <i class="fas fa-copy text-teal-600"></i> 一键复制
+                            </button>
+                            <button onclick="markFeedbackSent('${st.id}')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition shadow-sm flex items-center gap-1">
+                                <i class="fas fa-paper-plane"></i> 标记为已发送
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function updateCustomFeedbackText(stId, val) {
+            if (!appState.dailyData[stId]) appState.dailyData[stId] = {};
+            appState.dailyData[stId].feedbackText = val;
+            saveState();
+        }
+
+        function regenerateSingleFeedback(stId) {
+            const newText = generateParentFeedbackText(stId);
+            if (!appState.dailyData[stId]) appState.dailyData[stId] = {};
+            appState.dailyData[stId].feedbackText = newText;
+            appState.dailyData[stId].feedbackStatus = '已生成';
+            saveState();
+            renderTeacherFeedbackList();
+            showToast('已成功重置该学生的反馈文本！');
+        }
+
+        function copyFeedbackText(stId) {
+            const text = document.getElementById(`fbTextarea_${stId}`).value;
+            copyToClipboard(text);
+            if (!appState.dailyData[stId]) appState.dailyData[stId] = {};
+            appState.dailyData[stId].feedbackStatus = '已复制';
+            saveState();
+            renderTeacherFeedbackList();
+        }
+
+        function markFeedbackSent(stId) {
+            if (!appState.dailyData[stId]) appState.dailyData[stId] = {};
+            appState.dailyData[stId].feedbackStatus = '已发送';
+            saveState();
+            renderTeacherFeedbackList();
+            showToast('已标记该反馈为【已发送】！');
+        }
+
+        /* ===================================================================
+           7. GRADE REGISTRATION & CLASS VISUAL DIAGNOSTICS
+           =================================================================== */
+        let classChartInstance = null;
+
+        function renderGradeAnalysisView() {
+            const selectedClass = document.getElementById('analysisClassSelect').value;
+            const classStudents = appState.students.filter(s => s.className === selectedClass);
+
+            // Compute KPIs
+            let cTotal = 0, mTotal = 0, eTotal = 0;
+            const studentNames = [];
+            const cScores = [], mScores = [], eScores = [];
+
+            classStudents.forEach(st => {
+                const g = (appState.dailyData[st.id] && appState.dailyData[st.id].grades) || { chinese: 0, math: 0, english: 0 };
+                studentNames.push(st.name);
+                cScores.push(g.chinese || 0);
+                mScores.push(g.math || 0);
+                eScores.push(g.english || 0);
+
+                cTotal += (g.chinese || 0);
+                mTotal += (g.math || 0);
+                eTotal += (g.english || 0);
+            });
+
+            const count = classStudents.length || 1;
+            document.getElementById('kpiStudentCount').textContent = `${classStudents.length} 人`;
+            document.getElementById('kpiChineseAvg').textContent = (cTotal / count).toFixed(1);
+            document.getElementById('kpiMathAvg').textContent = (mTotal / count).toFixed(1);
+            document.getElementById('kpiEnglishAvg').textContent = (eTotal / count).toFixed(1);
+
+            // Render Grade Table
+            const tbody = document.getElementById('gradeRegistrationTableBody');
+            tbody.innerHTML = '';
+            classStudents.forEach(st => {
+                const g = (appState.dailyData[st.id] && appState.dailyData[st.id].grades) || { chinese: 0, math: 0, english: 0 };
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-2 font-bold text-slate-800">${st.name}</td>
+                    <td class="p-2">
+                        <input type="number" id="grade_c_${st.id}" value="${g.chinese}" class="w-16 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs text-center font-semibold outline-none focus:bg-white focus:ring-1 focus:ring-sage-500">
+                    </td>
+                    <td class="p-2">
+                        <input type="number" id="grade_m_${st.id}" value="${g.math}" class="w-16 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs text-center font-semibold outline-none focus:bg-white focus:ring-1 focus:ring-sage-500">
+                    </td>
+                    <td class="p-2">
+                        <input type="number" id="grade_e_${st.id}" value="${g.english}" class="w-16 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs text-center font-semibold outline-none focus:bg-white focus:ring-1 focus:ring-sage-500">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Render Chart.js Bar Graph
+            const ctx = document.getElementById('classGradeChart').getContext('2d');
+            if (classChartInstance) classChartInstance.destroy();
+
+            classChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: studentNames,
+                    datasets: [
+                        { label: '语文', data: cScores, backgroundColor: 'rgba(59, 130, 246, 0.7)', borderRadius: 6 },
+                        { label: '数学', data: mScores, backgroundColor: 'rgba(245, 158, 11, 0.7)', borderRadius: 6 },
+                        { label: '英语', data: eScores, backgroundColor: 'rgba(16, 185, 129, 0.7)', borderRadius: 6 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        function saveAllGrades() {
+            const selectedClass = document.getElementById('analysisClassSelect').value;
+            const classStudents = appState.students.filter(s => s.className === selectedClass);
+
+            classStudents.forEach(st => {
+                const cVal = parseInt(document.getElementById(`grade_c_${st.id}`).value) || 0;
+                const mVal = parseInt(document.getElementById(`grade_m_${st.id}`).value) || 0;
+                const eVal = parseInt(document.getElementById(`grade_e_${st.id}`).value) || 0;
+
+                if (!appState.dailyData[st.id]) appState.dailyData[st.id] = {};
+                appState.dailyData[st.id].grades = { chinese: cVal, math: mVal, english: eVal };
+            });
+
+            saveState();
+            renderGradeAnalysisView();
+            showToast('班级成绩信息已成功更新与保存！');
+        }
+
+        /* ===================================================================
+           8. PRINCIPAL VIEW - TEACHER HUB (Replaces SOP)
+           =================================================================== */
+        function renderPrincipalHub() {
+            const filterClass = document.getElementById('principalHubClassFilter').value;
+            
+            let students = appState.students;
+            if (filterClass !== 'ALL') {
+                students = students.filter(s => s.className === filterClass);
+            }
+
+            // Compute Global Rates
+            let presentCount = 0;
+            let totalHwCount = 0, completedHwCount = 0;
+            let totalExtraCount = 0, completedExtraCount = 0;
+            let sentFeedbackCount = 0;
+
+            students.forEach(st => {
+                const d = appState.dailyData[st.id] || {};
+                if (d.attendance === '出勤') presentCount++;
+
+                (d.homework || []).forEach(h => {
+                    totalHwCount++;
+                    if (h.status === '已完成') completedHwCount++;
+                });
+
+                (d.extraTasks || []).forEach(e => {
+                    totalExtraCount++;
+                    if (e.status === '已完成') completedExtraCount++;
+                });
+
+                if (d.feedbackStatus === '已发送' || d.feedbackStatus === '已复制') sentFeedbackCount++;
+            });
+
+            const stCount = students.length || 1;
+            document.getElementById('pHubAttendanceRate').textContent = `${Math.round((presentCount / stCount) * 100)}%`;
+            document.getElementById('pHubHomeworkRate').textContent = totalHwCount ? `${Math.round((completedHwCount / totalHwCount) * 100)}%` : '100%';
+            document.getElementById('pHubExtraRate').textContent = totalExtraCount ? `${Math.round((completedExtraCount / totalExtraCount) * 100)}%` : '100%';
+            document.getElementById('pHubFeedbackRate').textContent = `${Math.round((sentFeedbackCount / stCount) * 100)}%`;
+
+            // Render Detailed Student Summary Cards
+            const container = document.getElementById('principalHubStudentsList');
+            container.innerHTML = '';
+
+            students.forEach(st => {
+                const d = appState.dailyData[st.id] || {};
+                const teacher = appState.teachers.find(t => t.id === st.teacherId);
+                const teacherName = teacher ? teacher.name : '未分配';
+                const hwList = d.homework || [];
+                const extraList = d.extraTasks || [];
+                const grades = d.grades || { chinese: 0, math: 0, english: 0 };
+
+                const card = document.createElement('div');
+                card.className = 'bg-slate-50/70 rounded-2xl border border-slate-200 p-4 space-y-3';
+
+                card.innerHTML = `
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                        <div class="flex items-center gap-3">
+                            <span class="font-bold text-sm text-slate-800">${st.name}</span>
+                            <span class="text-xs bg-sage-100 text-sage-800 px-2 py-0.5 rounded font-semibold">${st.className}</span>
+                            <span class="text-xs text-slate-500">负责教师: <strong>${teacherName}</strong></span>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="font-bold">今日考勤:</span>
+                            <span class="px-2 py-0.5 rounded font-bold ${d.attendance === '出勤' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${d.attendance || '正常'}</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
+                            <div class="font-bold text-slate-700">日常作业完成情况 (${hwList.length} 项)：</div>
+                            ${hwList.map(h => `<div class="text-[11px] text-slate-600">• [${h.subject}] ${h.title} - <strong class="${h.status === '已完成' ? 'text-emerald-600' : 'text-amber-600'}">${h.status}</strong></div>`).join('') || '<div class="text-[11px] text-slate-400">暂无</div>'}
+                        </div>
+
+                        <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
+                            <div class="font-bold text-purple-700">附加任务 (${extraList.length} 项)：</div>
+                            ${extraList.map(e => `<div class="text-[11px] text-slate-600">• ${e.title} - <strong class="${e.status === '已完成' ? 'text-emerald-600' : 'text-amber-600'}">${e.status}</strong></div>`).join('') || '<div class="text-[11px] text-slate-400">暂无</div>'}
+                        </div>
+
+                        <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
+                            <div class="font-bold text-slate-700">最新测验成绩：</div>
+                            <div class="text-[11px] text-slate-600">语文: <strong class="text-blue-600">${grades.chinese}</strong> | 数学: <strong class="text-amber-600">${grades.math}</strong> | 英语: <strong class="text-emerald-600">${grades.english}</strong></div>
+                            <div class="pt-1 text-[11px] text-slate-400">反馈状态: <span class="font-bold text-slate-700">${d.feedbackStatus || '未生成'}</span></div>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        /* ===================================================================
+           9. PRINCIPAL VIEW - STUDENT ARCHIVES & TEACHER ASSIGNMENT
+           =================================================================== */
+        function renderPrincipalStudentsList() {
+            const tbody = document.getElementById('principalStudentTableBody');
+            tbody.innerHTML = '';
+
+            appState.students.forEach(st => {
+                const teacher = appState.teachers.find(t => t.id === st.teacherId);
+                const teacherName = teacher ? teacher.name : '未指定';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3.5">
+                        <div class="font-bold text-slate-800">${st.name}</div>
+                        <div class="text-[11px] text-slate-400">编号: ${st.id}</div>
+                    </td>
+                    <td class="p-3.5"><span class="bg-sage-50 text-sage-800 font-bold px-2.5 py-1 rounded-lg border border-sage-200">${st.className}</span></td>
+                    <td class="p-3.5 font-medium text-slate-600">${st.parentPhone}</td>
+                    <td class="p-3.5">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 font-bold text-slate-700 border border-slate-200">
+                            <i class="fas fa-user-tie text-sage-600"></i> ${teacherName}
+                        </span>
+                    </td>
+                    <td class="p-3.5 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="openAssignTeacherModal('${st.id}')" class="px-3 py-1 bg-sage-600 hover:bg-sage-700 text-white rounded-lg font-bold text-xs transition">
+                                <i class="fas fa-exchange-alt mr-1"></i> 更换/分配教师
+                            </button>
+                            <button onclick="deleteStudent('${st.id}')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg font-bold text-xs transition">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openAssignTeacherModal(stId) {
+            const st = appState.students.find(s => s.id === stId);
+            let teacherOpts = `<option value="">-- 解除教师绑定 --</option>`;
+            appState.teachers.forEach(t => {
+                teacherOpts += `<option value="${t.id}" ${st.teacherId === t.id ? 'selected' : ''}>${t.name} (${t.classes.join('、')})</option>`;
+            });
+
+            const content = `
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-bold text-slate-800"><i class="fas fa-user-tag text-sage-600 mr-2"></i>分配/更换负责教师 - ${st.name}</h3>
+                        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">选择目标负责教师</label>
+                            <select id="modalAssignTeacherSelect" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium outline-none">
+                                ${teacherOpts}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                        <button onclick="closeModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs">取消</button>
+                        <button onclick="saveTeacherAssignment('${st.id}')" class="px-4 py-2 bg-sage-600 text-white rounded-xl font-bold text-xs hover:bg-sage-700">保存变更</button>
+                    </div>
+                </div>
+            `;
+            showModal(content);
+        }
+
+        function saveTeacherAssignment(stId) {
+            const tId = document.getElementById('modalAssignTeacherSelect').value;
+            const st = appState.students.find(s => s.id === stId);
+            if (st) {
+                st.teacherId = tId;
+                saveState();
+                renderPrincipalStudentsList();
+                closeModal();
+                showToast(`已成功为【${st.name}】更新分配的负责教师！`);
+            }
+        }
+
+        function openAddStudentModal() {
+            let teacherOpts = `<option value="">-- 暂不分配 --</option>`;
+            appState.teachers.forEach(t => {
+                teacherOpts += `<option value="${t.id}">${t.name}</option>`;
+            });
+
+            const content = `
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-bold text-slate-800"><i class="fas fa-user-plus text-sage-600 mr-2"></i>新增学生档案</h3>
+                        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">学生全名 <span class="text-rose-500">*</span></label>
+                            <input type="text" id="mAddStName" placeholder="如：周杰" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">所属班级</label>
+                            <select id="mAddStClass" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium outline-none">
+                                <option value="三年级1班">三年级1班</option>
+                                <option value="三年级2班">三年级2班</option>
+                                <option value="四年级1班">四年级1班</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">家长联系电话</label>
+                            <input type="text" id="mAddStPhone" placeholder="138xxxxxxxx" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">分配负责教师</label>
+                            <select id="mAddStTeacher" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium outline-none">
+                                ${teacherOpts}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                        <button onclick="closeModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs">取消</button>
+                        <button onclick="saveNewStudent()" class="px-4 py-2 bg-sage-600 text-white rounded-xl font-bold text-xs hover:bg-sage-700">保存档案</button>
+                    </div>
+                </div>
+            `;
+            showModal(content);
+        }
+
+        function saveNewStudent() {
+            const name = document.getElementById('mAddStName').value.trim();
+            const className = document.getElementById('mAddStClass').value;
+            const phone = document.getElementById('mAddStPhone').value.trim();
+            const tId = document.getElementById('mAddStTeacher').value;
+
+            if (!name) return;
+
+            const newId = 'S' + (100 + appState.students.length + 1);
+            const rawName = name.length > 2 ? name.slice(-2) : name.slice(-1);
+
+            appState.students.push({
+                id: newId,
+                name: name,
+                rawName: rawName,
+                gender: '男',
+                className: className,
+                teacherId: tId,
+                parentPhone: phone || '未留电话',
+                motherName: rawName + '妈妈'
+            });
+
+            appState.dailyData[newId] = {
+                attendance: '出勤',
+                attendanceNote: '',
+                homework: [],
+                extraTasks: [],
+                grades: { chinese: 90, math: 90, english: 90 },
+                feedbackText: '',
+                feedbackStatus: '未生成'
+            };
+
+            saveState();
+            closeModal();
+            renderPrincipalStudentsList();
+            showToast('已成功录入新学生档案！');
+        }
+
+        function deleteStudent(stId) {
+            appState.students = appState.students.filter(s => s.id !== stId);
+            delete appState.dailyData[stId];
+            saveState();
+            renderPrincipalStudentsList();
+            showToast('已删除该学生档案！');
+        }
+
+        /* ===================================================================
+           10. PRINCIPAL VIEW - TEACHER MANAGEMENT & TEACHER ATTENDANCE
+           =================================================================== */
+        function renderPrincipalTeachersList() {
+            const tbody = document.getElementById('principalTeacherTableBody');
+            tbody.innerHTML = '';
+
+            appState.teachers.forEach(t => {
+                const count = appState.students.filter(s => s.teacherId === t.id).length;
+                let attendanceBadge = '';
+
+                if (t.attendance === '全勤' || t.attendance === '正常') {
+                    attendanceBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-300"><i class="fas fa-check-circle"></i> 正常全勤</span>`;
+                } else if (t.attendance === '事假' || t.attendance === '病假') {
+                    attendanceBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-100 text-rose-800 font-bold text-xs border border-rose-300"><i class="fas fa-exclamation-circle"></i> ${t.attendance} (${t.leaveReason || '请假'})</span>`;
+                } else {
+                    attendanceBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 font-bold text-xs border border-amber-300"><i class="fas fa-suitcase"></i> ${t.attendance}</span>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3.5 font-bold text-slate-800">${t.name}</td>
+                    <td class="p-3.5 font-medium text-slate-600">${t.phone}</td>
+                    <td class="p-3.5">
+                        <div class="font-bold text-slate-700">${t.classes.join('、')}</div>
+                        <div class="text-[11px] text-slate-400">直管学生: ${count} 人</div>
+                    </td>
+                    <td class="p-3.5">${attendanceBadge}</td>
+                    <td class="p-3.5 text-center">
+                        <button onclick="openTeacherAttendanceModal('${t.id}')" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-lg transition border border-slate-300">
+                            <i class="fas fa-edit mr-1"></i> 修改考勤状态
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openTeacherAttendanceModal(tId) {
+            const t = appState.teachers.find(teacher => teacher.id === tId);
+            const content = `
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-bold text-slate-800"><i class="fas fa-user-clock text-sage-600 mr-2"></i>教师考勤登记 - ${t.name}</h3>
+                        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">今日考勤状态</label>
+                            <select id="modalTeacherAttStatus" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium outline-none">
+                                <option value="全勤" ${t.attendance === '全勤' ? 'selected' : ''}>🟢 正常出勤 (全勤)</option>
+                                <option value="事假" ${t.attendance === '事假' ? 'selected' : ''}>🔴 事假</option>
+                                <option value="病假" ${t.attendance === '病假' ? 'selected' : ''}>🔴 病假</option>
+                                <option value="出差" ${t.attendance === '出差' ? 'selected' : ''}>🟡 外出/出差</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">请假/缺勤说明备注</label>
+                            <input type="text" id="modalTeacherAttReason" value="${t.leaveReason || ''}" placeholder="如：身体不适发烧请假一天..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium outline-none">
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                        <button onclick="closeModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs">取消</button>
+                        <button onclick="saveTeacherAttendance('${t.id}')" class="px-4 py-2 bg-sage-600 text-white rounded-xl font-bold text-xs hover:bg-sage-700">保存记录</button>
+                    </div>
+                </div>
+            `;
+            showModal(content);
+        }
+
+        function saveTeacherAttendance(tId) {
+            const t = appState.teachers.find(teacher => teacher.id === tId);
+            if (t) {
+                t.attendance = document.getElementById('modalTeacherAttStatus').value;
+                t.leaveReason = document.getElementById('modalTeacherAttReason').value.trim();
+                saveState();
+                renderPrincipalTeachersList();
+                closeModal();
+                showToast(`已成功更新【${t.name}】的考勤状态！`);
+            }
+        }
+
+        function openAddTeacherModal() {
+            const content = `
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-bold text-slate-800"><i class="fas fa-plus-circle text-sage-600 mr-2"></i>录入新教师</h3>
+                        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">教师姓名 <span class="text-rose-500">*</span></label>
+                            <input type="text" id="mAddTName" placeholder="如：刘老师" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">联系电话</label>
+                            <input type="text" id="mAddTPhone" placeholder="137xxxxxxxx" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">负责班级 (逗号分隔)</label>
+                            <input type="text" id="mAddTClasses" placeholder="如：四年级2班, 五年级1班" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium outline-none">
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                        <button onclick="closeModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs">取消</button>
+                        <button onclick="saveNewTeacher()" class="px-4 py-2 bg-sage-600 text-white rounded-xl font-bold text-xs hover:bg-sage-700">保存教师</button>
+                    </div>
+                </div>
+            `;
+            showModal(content);
+        }
+
+        function saveNewTeacher() {
+            const name = document.getElementById('mAddTName').value.trim();
+            const phone = document.getElementById('mAddTPhone').value.trim();
+            const classesStr = document.getElementById('mAddTClasses').value.trim();
+
+            if (!name) return;
+
+            const newId = 'T' + (100 + appState.teachers.length + 1);
+            const classes = classesStr ? classesStr.split(/[,，]/).map(c => c.trim()) : ['新班级'];
+
+            appState.teachers.push({
+                id: newId,
+                name: name,
+                phone: phone || '未留电话',
+                classes: classes,
+                attendance: '全勤',
+                leaveReason: ''
+            });
+
+            saveState();
+            closeModal();
+            renderPrincipalTeachersList();
+            showToast('已成功录入新教师！');
+        }
+
+        /* ===================================================================
+           11. MODAL CONTROLS
+           =================================================================== */
+        function showModal(contentHtml) {
+            const overlay = document.getElementById('modalOverlay');
+            const content = document.getElementById('modalContent');
+
+            content.innerHTML = contentHtml;
+            overlay.classList.remove('hidden');
+
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            const overlay = document.getElementById('modalOverlay');
+            const content = document.getElementById('modalContent');
+
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 200);
+        }
+
+        /* ===================================================================
+           12. INITIALIZATION
+           =================================================================== */
+        window.onload = function() {
+            initSemesterHeader();
+            switchRole(appState.currentRole || 'teacher');
+        };
+    </script>
+</body>
+</html>
