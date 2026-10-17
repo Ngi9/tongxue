@@ -1,0 +1,2775 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#588c73">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>童学托辅中心 - 教学管理系统</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Supabase JS：云端身份认证与数据库读写 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sage: {
+              50: '#f2f7f4',
+              100: '#e1ede6',
+              200: '#c5dcd0',
+              300: '#a1c4b2',
+              400: '#7aa891',
+              500: '#588c73', /* 主主题颜色：鼠尾草绿 */
+              600: '#43705b',
+              700: '#36594a',
+              800: '#2d483c',
+              900: '#263c33',
+            },
+            mint: {
+              50: '#f0fdf6',
+              100: '#dcffe9',
+              200: '#b9fbc8',
+              300: '#7bf49d',
+              400: '#38e36e',
+              500: '#12c94e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f7faf8;
+    }
+    /* 自定义滚动条 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f3;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c5dcd0;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #a1c4b2;
+    }
+  </style>
+  <style id="mobile-optimizations">
+    /* 移动端适配：保留原有业务逻辑，仅调整布局、触控与窄屏显示 */
+    html {
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-width: 320px;
+      overflow-x: hidden;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    button, a, input, select, textarea {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    canvas, img, svg {
+      max-width: 100%;
+    }
+
+    main,
+    #principalView,
+    #teacherView,
+    #t-sec-sop,
+    #t-sec-scores {
+      min-width: 0;
+    }
+
+    /* 表格在手机上可横向滑动，而不是撑宽整个页面 */
+    main .overflow-x-auto {
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
+    }
+
+    main table {
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    /* 弹窗可在矮屏手机上完整滚动 */
+    #editTeacherClassesModal,
+    #deleteTeacherConfirmModal,
+    #addTeacherModal,
+    #studentModal,
+    #termModal,
+    #newExamModal,
+    #changePwdModal {
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    @media (max-width: 640px) {
+      body {
+        font-size: 14px;
+      }
+
+      /* 顶栏允许自然换行，避免手机窄屏时按钮和校名挤在一起 */
+      header {
+        padding-top: env(safe-area-inset-top);
+      }
+
+      header > div {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+      }
+
+      header .h-16 {
+        height: auto !important;
+        min-height: 64px;
+        padding-top: 7px;
+        padding-bottom: 7px;
+        gap: 6px;
+        align-items: center;
+      }
+
+      header .h-16 > .flex.items-center.space-x-3:first-child {
+        flex: 1 1 190px;
+        min-width: 0;
+        gap: 8px;
+      }
+
+      header #schoolNameText {
+        font-size: 16px;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      header #roleBadge {
+        font-size: 10px;
+        padding-left: 6px;
+        padding-right: 6px;
+        white-space: nowrap;
+      }
+
+      header #termStatusDisplay {
+        display: inline-block;
+        max-width: 100%;
+        line-height: 1.4;
+        white-space: normal;
+      }
+
+      header .h-16 > .flex.items-center.space-x-3:last-child {
+        flex: 0 0 auto;
+        gap: 2px;
+      }
+
+      header .h-16 > .flex.items-center.space-x-3:last-child button {
+        min-width: 40px;
+        min-height: 40px;
+      }
+
+      /* 登录卡片缩小留白，适配窄屏与手机横屏 */
+      #loginSection {
+        overflow-y: auto;
+        align-items: flex-start;
+        padding-top: max(12px, env(safe-area-inset-top));
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+      }
+
+      #loginSection > div {
+        width: 100%;
+        padding: 20px;
+        margin: auto 0;
+        border-radius: 20px;
+      }
+
+      #loginSection .text-2xl {
+        font-size: 22px;
+      }
+
+      #loginSection .bg-sage-50 {
+        padding: 10px;
+      }
+
+      #loginSection .bg-sage-50 > div {
+        gap: 8px;
+        align-items: flex-start;
+      }
+
+      #loginSection .bg-sage-50 span:first-child {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+
+      main {
+        padding: 12px !important;
+      }
+
+      /* 主校长端/教师端导航变为可横向滑动的标签栏 */
+      main > #principalView > .flex.border-b,
+      main > #teacherView > .flex.border-b {
+        display: flex;
+        gap: 20px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        white-space: nowrap;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+        padding: 0 2px;
+      }
+
+      main > #principalView > .flex.border-b::-webkit-scrollbar,
+      main > #teacherView > .flex.border-b::-webkit-scrollbar {
+        display: none;
+      }
+
+      main > #principalView > .flex.border-b > button,
+      main > #teacherView > .flex.border-b > button {
+        flex: 0 0 auto;
+        margin-left: 0 !important;
+        padding-top: 10px;
+        padding-bottom: 12px;
+        font-size: 13px;
+      }
+
+      /* 卡片更紧凑，避免手机屏幕一次只能看到很少内容 */
+      main .bg-white.p-5.rounded-2xl {
+        padding: 14px !important;
+      }
+
+      main .rounded-2xl.border.border-sage-100.shadow-sm {
+        border-radius: 14px;
+      }
+
+      #teacherView #t-sec-sop > * + * {
+        margin-top: 16px !important;
+      }
+
+      #teacherView h3,
+      #teacherView h4,
+      #principalView h3 {
+        line-height: 1.45;
+      }
+
+      /* 表单更容易点按，防止 iOS 输入时自动放大页面 */
+      input:not([type="checkbox"]):not([type="radio"]),
+      select,
+      textarea {
+        max-width: 100%;
+        font-size: 16px !important;
+      }
+
+      input[type="checkbox"],
+      input[type="radio"] {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 auto;
+      }
+
+      button {
+        max-width: 100%;
+      }
+
+      /* 成绩表、档案表保留完整字段，并允许手指滑动查看 */
+      main table th,
+      main table td {
+        padding: 10px 12px;
+        white-space: nowrap;
+      }
+
+      main table input {
+        min-width: 72px;
+      }
+
+      /* 图表在竖屏下减少高度，释放可视空间 */
+      #schoolScoreChart {
+        max-height: 220px;
+      }
+
+      #examScoreChart {
+        max-height: 220px;
+      }
+
+      /* 弹窗在窄屏上不紧贴边缘，内容超高时页面可滚动 */
+      #editTeacherClassesModal,
+      #deleteTeacherConfirmModal,
+      #addTeacherModal,
+      #studentModal,
+      #termModal,
+      #newExamModal,
+      #changePwdModal {
+        align-items: flex-start;
+        padding-top: max(12px, env(safe-area-inset-top));
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+      }
+
+      #editTeacherClassesModal > div,
+      #deleteTeacherConfirmModal > div,
+      #addTeacherModal > div,
+      #studentModal > div,
+      #termModal > div,
+      #newExamModal > div,
+      #changePwdModal > div {
+        margin: auto;
+        max-width: 100%;
+      }
+
+      /* 较长的标题、邮箱和备注允许换行 */
+      main h1,
+      main h2,
+      main h3,
+      main h4,
+      main p,
+      main label {
+        overflow-wrap: anywhere;
+      }
+    }
+
+    @media (max-width: 380px) {
+      header #schoolNameText {
+        font-size: 15px;
+      }
+
+      header #termStatusDisplay {
+        font-size: 10px;
+      }
+
+      #loginSection > div {
+        padding: 16px;
+      }
+
+      main {
+        padding: 9px !important;
+      }
+
+      main .bg-white.p-5.rounded-2xl {
+        padding: 12px !important;
+      }
+    }
+  </style>
+
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- 顶部导航栏 -->
+  <header class="bg-white border-b border-sage-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16">
+        <!-- 品牌名称及学期状态 -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-sage-500 flex items-center justify-center text-white text-xl font-bold shadow-md">
+            <i class="fa-solid fa-graduation-cap"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="font-bold text-lg text-slate-800 tracking-wide" id="schoolNameText">童学托辅中心</span>
+              <span class="px-2 py-0.5 text-xs rounded-full bg-sage-100 text-sage-700 border border-sage-300 font-medium" id="roleBadge">校长端</span>
+            </div>
+            <!-- 2. 顶部学期与周次状态栏 -->
+            <div class="flex items-center text-xs text-slate-500 mt-0.5 space-x-2">
+              <span id="termStatusDisplay"><i class="fa-regular fa-calendar-alt text-sage-500 mr-1"></i>2026秋季学期 第7周</span>
+              <button onclick="toggleTermModal()" class="text-sage-600 hover:text-sage-800 underline text-xs">切换</button>
+              <span id="cloudSyncStatus" class="text-[10px] text-slate-400 ml-1">云端连接初始化中</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 个人信息与快捷切换 -->
+        <div class="flex items-center space-x-3">
+          <div class="text-right hidden sm:block">
+            <div class="text-sm font-semibold text-slate-700" id="userNameDisplay">陈老师</div>
+            <div class="text-xs text-slate-400" id="userEmailDisplay">principal@tongxue.com</div>
+          </div>
+          <button onclick="openChangePwdModal()" class="p-2 text-slate-400 hover:text-sage-600 rounded-lg hover:bg-sage-50 transition" title="修改密码">
+            <i class="fa-solid fa-key"></i>
+          </button>
+          <button onclick="logout()" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition" title="退出登录">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 登录页面容器 -->
+  <div id="loginSection" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border border-sage-100">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-sage-500 rounded-2xl flex items-center justify-center text-white text-3xl mx-auto mb-3 shadow-lg shadow-sage-200">
+          <i class="fa-solid fa-school"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-slate-800">童学托辅中心</h2>
+        <p class="text-sm text-slate-500 mt-1">教学管理系统</p>
+      </div>
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">账号邮箱</label>
+          <div class="relative">
+            <i class="fa-regular fa-envelope absolute left-3 top-3 text-slate-400 text-sm"></i>
+            <input type="email" id="loginEmail" required class="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-sage-400 outline-none" placeholder="例如: principal@tongxue.com">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">登录密码</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3 top-3 text-slate-400 text-sm"></i>
+            <input type="password" id="loginPassword" required class="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-sage-400 outline-none" placeholder="默认密码: 123456">
+          </div>
+        </div>
+        
+        <div class="bg-sage-50 p-3 rounded-xl border border-sage-200 text-xs text-slate-600 space-y-1">
+          <p class="font-medium text-sage-800">快捷填入账号（需先在 Supabase Auth 创建）：</p>
+          <div class="flex justify-between items-center cursor-pointer hover:bg-sage-100 p-1 rounded" onclick="quickFill('principal@tongxue.com')">
+            <span>👑 校长端账号: <b>principal@tongxue.com</b></span>
+            <span class="text-sage-600 text-[10px]">填入</span>
+          </div>
+          <div class="flex justify-between items-center cursor-pointer hover:bg-sage-100 p-1 rounded" onclick="quickFill('zhang@tongxue.com')">
+            <span>👩‍🏫 教师端账号: <b>zhang@tongxue.com</b></span>
+            <span class="text-sage-600 text-[10px]">填入</span>
+          </div>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-sage-500 hover:bg-sage-600 text-white font-medium text-sm rounded-lg shadow-md shadow-sage-200 transition">
+          登 录 系统
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 主应用视图区域 -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- ===== 校长端视图 ===== -->
+    <div id="principalView" class="space-y-6 hidden">
+      <!-- 校长端顶部 Nav Tab -->
+      <div class="flex border-b border-sage-200 space-x-8 text-sm font-medium">
+        <button onclick="switchPrincipalTab('overview')" id="tab-overview" class="pb-3 border-b-2 border-sage-500 text-sage-700 font-semibold flex items-center space-x-2">
+          <i class="fa-solid fa-chart-line"></i><span>教学汇总中心</span>
+        </button>
+        <button onclick="switchPrincipalTab('teachers')" id="tab-teachers" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center space-x-2">
+          <i class="fa-solid fa-chalkboard-user"></i><span>教师管理与考勤</span>
+        </button>
+        <button onclick="switchPrincipalTab('students')" id="tab-students" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center space-x-2">
+          <i class="fa-solid fa-user-graduate"></i><span>学生档案与分配</span>
+        </button>
+      </div>
+
+      <!-- Tab 1: 教学汇总中心 -->
+      <div id="p-sec-overview" class="space-y-6">
+        <!-- 统计卡片 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div class="bg-white p-4 rounded-xl border border-sage-100 shadow-sm flex items-center space-x-3">
+            <div class="p-3 bg-sage-100 rounded-lg text-sage-600 text-lg"><i class="fa-solid fa-user-check"></i></div>
+            <div>
+              <div class="text-xs text-slate-400">今日到课率</div>
+              <div class="text-xl font-bold text-slate-800" id="statAttendance">96.8%</div>
+            </div>
+          </div>
+          <div class="bg-white p-4 rounded-xl border border-sage-100 shadow-sm flex items-center space-x-3">
+            <div class="p-3 bg-blue-50 rounded-lg text-blue-600 text-lg"><i class="fa-solid fa-book-open"></i></div>
+            <div>
+              <div class="text-xs text-slate-400">作业总完成率</div>
+              <div class="text-xl font-bold text-slate-800" id="statHomework">88.5%</div>
+            </div>
+          </div>
+          <div class="bg-white p-4 rounded-xl border border-sage-100 shadow-sm flex items-center space-x-3">
+            <div class="p-3 bg-amber-50 rounded-lg text-amber-600 text-lg"><i class="fa-solid fa-list-check"></i></div>
+            <div>
+              <div class="text-xs text-slate-400">附加任务完成率</div>
+              <div class="text-xl font-bold text-slate-800" id="statExtra">75.0%</div>
+            </div>
+          </div>
+          <div class="bg-white p-4 rounded-xl border border-sage-100 shadow-sm flex items-center space-x-3">
+            <div class="p-3 bg-emerald-50 rounded-lg text-emerald-600 text-lg"><i class="fa-solid fa-paper-plane"></i></div>
+            <div>
+              <div class="text-xs text-slate-400">家长反馈发送率</div>
+              <div class="text-xl font-bold text-slate-800" id="statFeedback">100%</div>
+            </div>
+          </div>
+          <div class="bg-white p-4 rounded-xl border border-sage-100 shadow-sm flex items-center space-x-3">
+            <div class="p-3 bg-purple-50 rounded-lg text-purple-600 text-lg"><i class="fa-solid fa-users"></i></div>
+            <div>
+              <div class="text-xs text-slate-400">在册学生数</div>
+              <div class="text-xl font-bold text-slate-800" id="statTotalStudents">24 人</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 概览图表及实况 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-sage-100 shadow-sm">
+            <h3 class="font-bold text-slate-800 mb-4 flex items-center">
+              <i class="fa-solid fa-chart-simple text-sage-500 mr-2"></i>全校学科成绩优秀率与及格率趋势
+            </h3>
+            <div class="h-64 relative">
+              <canvas id="schoolScoreChart"></canvas>
+            </div>
+          </div>
+          
+          <div class="bg-white p-5 rounded-2xl border border-sage-100 shadow-sm space-y-4">
+            <h3 class="font-bold text-slate-800 flex items-center">
+              <i class="fa-solid fa-clock-rotate-left text-sage-500 mr-2"></i>各班级作业辅导实时进度
+            </h3>
+            <div class="space-y-3" id="classProgressList">
+              <!-- JS 动态加载 -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: 教师管理与考勤 -->
+      <div id="p-sec-teachers" class="space-y-6 hidden">
+        <div class="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
+          <h3 class="font-bold text-slate-800 text-lg">教师档案与考勤管理</h3>
+          <button onclick="openAddTeacherModal()" class="px-4 py-2 bg-sage-500 hover:bg-sage-600 text-white rounded-lg text-sm font-medium shadow transition flex items-center">
+            <i class="fa-solid fa-plus mr-1.5"></i>新增教师账号
+          </button>
+        </div>
+
+        <!-- 教师档案表格 -->
+        <div class="bg-white rounded-2xl border border-sage-100 shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-slate-100 font-semibold text-slate-700 bg-sage-50/50">在教教师列表</div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600">
+              <thead class="bg-slate-50 text-xs text-slate-500 uppercase">
+                <tr>
+                  <th class="px-4 py-3">教师姓名</th>
+                  <th class="px-4 py-3">账号邮箱</th>
+                  <th class="px-4 py-3">负责班级</th>
+                  <th class="px-4 py-3">状态</th>
+                  <th class="px-4 py-3">今日考勤</th>
+                  <th class="px-4 py-3 text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody id="teacherTableBody" class="divide-y divide-slate-100">
+                <!-- 动态填充 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 教师每日考勤登记与汇总 -->
+        <div class="bg-white p-5 rounded-2xl border border-sage-100 shadow-sm space-y-4">
+          <div class="flex justify-between items-center">
+            <h4 class="font-bold text-slate-800"><i class="fa-regular fa-calendar-check text-sage-500 mr-2"></i>教师每日出勤快速登记</h4>
+            <span class="text-xs text-slate-400">默认全勤，支持实时调整记录</span>
+          </div>
+          <div id="teacherAttendanceGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- JS 填充 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: 学生档案与分配 -->
+      <div id="p-sec-students" class="space-y-6 hidden">
+        <div class="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
+          <div class="flex items-center space-x-3">
+            <h3 class="font-bold text-slate-800 text-lg">全校学生档案库</h3>
+            <select id="pStudentClassFilter" onchange="renderStudentManagementTable()" class="px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white outline-none">
+              <option value="ALL">全部班级</option>
+              <option value="一年级">一年级</option>
+              <option value="二年级">二年级</option>
+              <option value="三年级">三年级</option>
+              <option value="四年级">四年级</option>
+              <option value="五年级">五年级</option>
+              <option value="六年级">六年级</option>
+              <option value="初一">初一</option>
+              <option value="初二">初二</option>
+              <option value="初三">初三</option>
+            </select>
+          </div>
+          <button onclick="openStudentModal()" class="px-4 py-2 bg-sage-500 hover:bg-sage-600 text-white rounded-lg text-sm font-medium shadow transition flex items-center">
+            <i class="fa-solid fa-user-plus mr-1.5"></i>录入新学生
+          </button>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-sage-100 shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600">
+              <thead class="bg-slate-50 text-xs text-slate-500 uppercase">
+                <tr>
+                  <th class="px-4 py-3">学生姓名</th>
+                  <th class="px-4 py-3">性别</th>
+                  <th class="px-4 py-3">班级</th>
+                  <th class="px-4 py-3">负责指导教师</th>
+                  <th class="px-4 py-3">学籍状态</th>
+                  <th class="px-4 py-3">备注说明</th>
+                  <th class="px-4 py-3 text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody id="studentTableBody" class="divide-y divide-slate-100">
+                <!-- 动态填充 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ===== 教师端视图 ===== -->
+    <div id="teacherView" class="space-y-6 hidden">
+      <!-- 教师端顶部 Nav Tab -->
+      <div class="flex border-b border-sage-200 space-x-8 text-sm font-medium">
+        <button onclick="switchTeacherTab('sop')" id="ttab-sop" class="pb-3 border-b-2 border-sage-500 text-sage-700 font-semibold flex items-center space-x-2">
+          <i class="fa-solid fa-list-check"></i><span>工作台</span>
+        </button>
+        <button onclick="switchTeacherTab('scores')" id="ttab-scores" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center space-x-2">
+          <i class="fa-solid fa-pen-to-square"></i><span>成绩登记与分析</span>
+        </button>
+      </div>
+
+      <!-- 教师 Tab 1: 工作台 -->
+      <div id="t-sec-sop" class="space-y-8">
+        
+        <!-- SOP① 内部学生考勤 -->
+        <div class="bg-white p-5 rounded-2xl border border-sage-100 shadow-sm space-y-4">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-3 gap-2">
+            <div>
+              <span class="px-2.5 py-1 bg-sage-100 text-sage-800 text-xs font-bold rounded-md mr-2">SOP ①</span>
+              <span class="font-bold text-slate-800 text-lg">内部学生考勤登记</span>
+              <span class="text-xs text-slate-400 ml-2">（仅内部存档，不自动输出给家长）</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="quickCheckAllPresent()" class="px-3 py-1.5 bg-sage-50 hover:bg-sage-100 text-sage-700 text-xs rounded-lg border border-sage-200 font-medium transition">
+                <i class="fa-solid fa-check-double mr-1"></i>一键全到
+              </button>
+              <button onclick="openStudentModal()" class="px-3 py-1.5 bg-sage-500 hover:bg-sage-600 text-white text-xs rounded-lg font-medium shadow transition">
+                <i class="fa-solid fa-plus mr-1"></i>+ 新增学生
+              </button>
+            </div>
+          </div>
+
+          <div id="sopAttendanceContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- 按班级分组展示 -->
+          </div>
+        </div>
+
+        <!-- SOP② 日常作业批量派发 -->
+        <div class="bg-white p-5 rounded-2xl border border-sage-100 shadow-sm space-y-4">
+          <div class="border-b border-slate-100 pb-3">
+            <span class="px-2.5 py-1 bg-sage-100 text-sage-800 text-xs font-bold rounded-md mr-2">SOP ②</span>
+            <span class="font-bold text-slate-800 text-lg">日常作业批量派发</span>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 派发表单 -->
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+              <h4 class="font-bold text-xs uppercase tracking-wider text-slate-600">布置新作业项</h4>
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">选择目标班级</label>
+                <select id="dispatchClassSelect" class="w-full text-sm border border-slate-200 rounded-lg p-2 outline-none">
+                  <option value="ALL">名下所有学生</option>
+                  <option value="一年级">一年级</option>
+                  <option value="二年级">二年级</option>
+                  <option value="三年级">三年级</option>
+                  <option value="四年级">四年级</option>
+                  <option value="五年级">五年级</option>
+                  <option value="六年级">六年级</option>
+                  <option value="初一">初一</option>
+                  <option value="初二">初二</option>
+                  <option value="初三">初三</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">选择学科 (中小学9大学科)</label>
+                <select id="dispatchSubjectSelect" class="w-full text-sm border border-slate-200 rounded-lg p-2 outline-none">
+                  <option value="语文">语文</option>
+                  <option value="数学">数学</option>
+                  <option value="英语">英语</option>
+                  <option value="物理">物理</option>
+                  <option value="化学">化学</option>
+                  <option value="生物">生物</option>
+                  <option value="历史">历史</option>
+                  <option value="地理">地理</option>
+                  <option value="道德与法治">道德与法治</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">作业内容描述</label>
+                <textarea id="dispatchContentInput" rows="2" class="w-full text-sm border border-slate-200 rounded-lg p-2 outline-none" placeholder="例如：练习册第12页第1-5题，背诵古诗"></textarea>
+              </div>
+              <button onclick="dispatchHomework()" class="w-full py-2 bg-sage-500 hover:bg-sage-600 text-white rounded-lg text-sm font-medium shadow transition">
+                <i class="fa-solid fa-paper-plane mr-1"></i>一键批量派发给学生
+              </button>
+            </div>
+
+            <!-- 学生当前任务概览 -->
+            <div class="lg:col-span-2 space-y-3">
+              <h4 class="font-bold text-xs uppercase tracking-wider text-slate-600">已派发作业监控 (支持单人删除微调)</h4>
+              <div id="dispatchedTasksList" class="space-y-3 max-h-80 overflow-y-auto pr-1">
+                <!-- JS 动态渲染 -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SOP③ 辅导检查与附加任务 (原SOP③④⑤合并重命名) -->
+        <div class="bg-white p-5 rounded-2xl border border-sage-100 shadow-sm space-y-6">
+          <div class="border-b border-slate-100 pb-3 flex justify-between items-center">
+            <div>
+              <span class="px-2.5 py-1 bg-sage-500 text-white text-xs font-bold rounded-md mr-2">SOP ③</span>
+              <span class="font-bold text-slate-800 text-lg">辅导检查与附加任务</span>
+              <p class="text-xs text-slate-400 mt-1">集成分项作业状态标记、错题点记录、辅导备注、资料图片以及拆行附加任务录入</p>
+            </div>
+            <select id="sop3ClassFilter" onchange="renderSOP3StudentCards()" class="text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 bg-slate-50">
+              <option value="ALL">全部负责学生</option>
+              <option value="一年级">一年级</option>
+              <option value="二年级">二年级</option>
+              <option value="三年级">三年级</option>
+              <option value="四年级">四年级</option>
+              <option value="五年级">五年级</option>
+              <option value="六年级">六年级</option>
+              <option value="初一">初一</option>
+              <option value="初二">初二</option>
+              <option value="初三">初三</option>
+            </select>
+          </div>
+
+          <!-- 学生作业及附加任务卡片列表 -->
+          <div id="sop3StudentCardsContainer" class="space-y-6">
+            <!-- JS 渲染每个学生的作业细项 & 附加任务拆行 -->
+          </div>
+        </div>
+
+        <!-- SOP④ 家长反馈 (原SOP⑥重命名) -->
+        <div class="bg-white p-5 rounded-2xl border border-sage-100 shadow-sm space-y-4">
+          <div class="border-b border-slate-100 pb-3 flex justify-between items-center">
+            <div>
+              <span class="px-2.5 py-1 bg-emerald-600 text-white text-xs font-bold rounded-md mr-2">SOP ④</span>
+              <span class="font-bold text-slate-800 text-lg">家长反馈</span>
+              <span class="text-xs text-slate-400 ml-2">自动去考勤、去姓氏精准生成，一键发送</span>
+            </div>
+            <button onclick="batchGenerateAllFeedback()" class="px-3 py-1.5 bg-sage-100 hover:bg-sage-200 text-sage-800 text-xs font-semibold rounded-lg transition">
+              <i class="fa-solid fa-bolt mr-1"></i>一键生成所有未生成文本
+            </button>
+          </div>
+
+          <div id="sop4FeedbackContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- JS 渲染卡片 -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 教师 Tab 2: 成绩登记与分析 -->
+      <div id="t-sec-scores" class="space-y-6 hidden">
+        <div class="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
+          <h3 class="font-bold text-slate-800 text-lg">学生考试成绩录入与分析</h3>
+          <button onclick="openNewExamModal()" class="px-4 py-2 bg-sage-500 hover:bg-sage-600 text-white rounded-lg text-sm font-medium shadow transition flex items-center">
+            <i class="fa-solid fa-square-plus mr-1.5"></i>新增考试
+          </button>
+        </div>
+
+        <!-- 成绩统计及图表分析 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="bg-white p-5 rounded-2xl border border-sage-100 shadow-sm space-y-3">
+            <h4 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-calculator text-sage-500 mr-2"></i>选择考试批次分析</h4>
+            <select id="examBatchSelect" onchange="renderExamAnalysis()" class="w-full text-sm border border-slate-200 rounded-lg p-2 outline-none">
+              <!-- 考试选项 -->
+            </select>
+            
+            <div id="examStatBox" class="space-y-2 pt-2 text-sm">
+              <!-- 动态统计 -->
+            </div>
+          </div>
+
+          <div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-sage-100 shadow-sm">
+            <h4 class="font-bold text-slate-800 text-sm mb-3"><i class="fa-solid fa-chart-column text-sage-500 mr-2"></i>成绩表现分布柱状图</h4>
+            <div class="h-60 relative">
+              <canvas id="examScoreChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- 成绩录入明细表 -->
+        <div class="bg-white rounded-2xl border border-sage-100 shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-slate-100 font-semibold text-slate-700 bg-sage-50/50 flex justify-between items-center">
+            <span>学生具体得分录入表</span>
+            <span class="text-xs text-slate-400">填入得分后失焦或按 Enter 即可直接更新保存</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600">
+              <thead class="bg-slate-50 text-xs text-slate-500 uppercase">
+                <tr id="examTableHead">
+                  <th class="px-4 py-3">学生姓名</th>
+                  <th class="px-4 py-3">班级</th>
+                  <!-- 动态学科标题 -->
+                </tr>
+              </thead>
+              <tbody id="examTableBody" class="divide-y divide-slate-100">
+                <!-- 动态数据 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ===== 通用弹窗 modal ===== -->
+
+  <!-- 1. 修改负责班级弹窗（校长端增强功能） -->
+  <div id="editTeacherClassesModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border border-sage-100 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-slate-800">修改教师负责班级</h3>
+        <button onclick="closeModal('editTeacherClassesModal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <input type="hidden" id="editTeacherIdTarget">
+      <div>
+        <p class="text-xs text-slate-500 mb-2">教师：<span id="targetTeacherName" class="font-bold text-slate-800">--</span></p>
+        <label class="block text-xs font-semibold text-slate-600 mb-2">勾选该教师负责的班级（支持多选）：</label>
+        <div class="grid grid-cols-2 gap-2 text-sm" id="classCheckboxGroup">
+          <label class="flex items-center space-x-2 p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-sage-50">
+            <input type="checkbox" value="一年级" class="rounded text-sage-500 focus:ring-sage-400">
+            <span>一年级</span>
+          </label>
+          <label class="flex items-center space-x-2 p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-sage-50">
+            <input type="checkbox" value="二年级" class="rounded text-sage-500 focus:ring-sage-400">
+            <span>二年级</span>
+          </label>
+          <label class="flex items-center space-x-2 p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-sage-50">
+            <input type="checkbox" value="三年级" class="rounded text-sage-500 focus:ring-sage-400">
+            <span>三年级</span>
+          </label>
+          <label class="flex items-center space-x-2 p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-sage-50">
+            <input type="checkbox" value="四年级" class="rounded text-sage-500 focus:ring-sage-400">
+            <span>四年级</span>
+          </label>
+          <label class="flex items-center space-x-2 p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-sage-50">
+            <input type="checkbox" value="五年级" class="rounded text-sage-500 focus:ring-sage-400">
+            <span>五年级</span>
+          </label>
+          <label class="flex items-center space-x-2 p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-sage-50">
+            <input type="checkbox" value="六年级" class="rounded text-sage-500 focus:ring-sage-400">
+            <span>六年级</span>
+          </label>
+          <label class="flex items-center space-x-2 p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-sage-50">
+            <input type="checkbox" value="初一" class="rounded text-sage-500 focus:ring-sage-400">
+            <span>初一</span>
+          </label>
+          <label class="flex items-center space-x-2 p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-sage-50">
+            <input type="checkbox" value="初二" class="rounded text-sage-500 focus:ring-sage-400">
+            <span>初二</span>
+          </label>
+          <label class="flex items-center space-x-2 p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-sage-50">
+            <input type="checkbox" value="初三" class="rounded text-sage-500 focus:ring-sage-400">
+            <span>初三</span>
+          </label>
+        </div>
+      </div>
+      <div class="flex justify-end space-x-2 pt-2">
+        <button onclick="closeModal('editTeacherClassesModal')" class="px-4 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50">取消</button>
+        <button onclick="saveTeacherClassesChange()" class="px-4 py-2 bg-sage-500 hover:bg-sage-600 text-white rounded-lg text-xs font-medium">确认保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 删除教师二次确认弹窗（校长端增强功能） -->
+  <div id="deleteTeacherConfirmModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-rose-100 space-y-4 text-center">
+      <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-xl mx-auto">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <h3 class="font-bold text-slate-800 text-lg">确认要删除该教师吗？</h3>
+      <p class="text-xs text-slate-500">删除后将无法恢复该教师账号，且<b>系统将自动解绑该教师负责的所有学生</b>（关联学生将变为待分配状态）。</p>
+      <input type="hidden" id="deleteTeacherIdTarget">
+      <div class="flex justify-center space-x-3 pt-2">
+        <button onclick="closeModal('deleteTeacherConfirmModal')" class="px-4 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50">取消</button>
+        <button onclick="confirmDeleteTeacher()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-medium">确认解绑并删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 新增教师弹窗 -->
+  <div id="addTeacherModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border border-sage-100 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-slate-800">新增教师账号</h3>
+        <button onclick="closeModal('addTeacherModal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">教师姓名</label>
+          <input type="text" id="newTeacherName" class="w-full text-sm border border-slate-200 rounded-lg p-2 outline-none" placeholder="例如：李老师">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">登录账号邮箱</label>
+          <input type="email" id="newTeacherEmail" class="w-full text-sm border border-slate-200 rounded-lg p-2 outline-none" placeholder="li@tongxue.com">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">云端登录账号说明</label>
+          <p class="w-full text-xs leading-5 text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-2">请先在 Supabase → Authentication → Users 中创建此邮箱并设置密码，再回到这里创建教师档案。密码由云端认证系统管理。</p>
+        </div>
+      </div>
+      <div class="flex justify-end space-x-2 pt-2">
+        <button onclick="closeModal('addTeacherModal')" class="px-4 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-600">取消</button>
+        <button onclick="saveNewTeacher()" class="px-4 py-2 bg-sage-500 hover:bg-sage-600 text-white rounded-lg text-xs font-medium">创建教师档案</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 新增/编辑学生档案弹窗 -->
+  <div id="studentModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border border-sage-100 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-slate-800" id="studentModalTitle">编辑学生档案</h3>
+        <button onclick="closeModal('studentModal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <input type="hidden" id="studentModalId">
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">学生姓名</label>
+          <input type="text" id="studentModalName" class="w-full text-sm border border-slate-200 rounded-lg p-2 outline-none" placeholder="例如：林小明">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">性别</label>
+            <select id="studentModalGender" class="w-full text-sm border border-slate-200 rounded-lg p-2 outline-none">
+              <option value="男">男</option>
+              <option value="女">女</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">班级</label>
+            <select id="studentModalClass" class="w-full text-sm border border-slate-200 rounded-lg p-2 outline-none">
+              <option value="一年级">一年级</option>
+              <option value="二年级">二年级</option>
+              <option value="三年级">三年级</option>
+              <option value="四年级">四年级</option>
+              <option value="五年级">五年级</option>
+              <option value="六年级">六年级</option>
+              <option value="初一">初一</option>
+              <option value="初二">初二</option>
+              <option value="初三">初三</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">绑定负责指导教师</label>
+          <select id="studentModalTeacher" class="w-full text-sm border border-slate-200 rounded-lg p-2 outline-none">
+            <!-- 动态渲染所有教师 -->
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">状态</label>
+          <select id="studentModalStatus" class="w-full text-sm border border-slate-200 rounded-lg p-2 outline-none">
+            <option value="在读">在读</option>
+            <option value="停用">停用</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">备注信息</label>
+          <input type="text" id="studentModalRemark" class="w-full text-sm border border-slate-200 rounded-lg p-2 outline-none" placeholder="学习特点、特殊注意事项">
+        </div>
+      </div>
+      <div class="flex justify-end space-x-2 pt-2">
+        <button onclick="closeModal('studentModal')" class="px-4 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-600">取消</button>
+        <button onclick="saveStudentModal()" class="px-4 py-2 bg-sage-500 hover:bg-sage-600 text-white rounded-lg text-xs font-medium">保存档案</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 切换学期弹窗 -->
+  <div id="termModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-sage-100 space-y-4">
+      <h3 class="font-bold text-slate-800">切换当前教学学期</h3>
+      <div class="space-y-3">
+        <button onclick="selectTerm('2026秋季学期 第7周')" class="w-full p-2.5 text-left border rounded-xl hover:bg-sage-50 hover:border-sage-400 text-sm flex justify-between items-center">
+          <span>2026秋季学期 第7周</span>
+          <i class="fa-solid fa-angle-right text-slate-300"></i>
+        </button>
+        <button onclick="selectTerm('2027春季学期')" class="w-full p-2.5 text-left border rounded-xl hover:bg-sage-50 hover:border-sage-400 text-sm flex justify-between items-center">
+          <span>2027春季学期</span>
+          <i class="fa-solid fa-angle-right text-slate-300"></i>
+        </button>
+        <button onclick="selectTerm('寒暑假托辅期')" class="w-full p-2.5 text-left border rounded-xl hover:bg-sage-50 hover:border-sage-400 text-sm flex justify-between items-center">
+          <span>寒暑假托辅期</span>
+          <i class="fa-solid fa-angle-right text-slate-300"></i>
+        </button>
+      </div>
+      <button onclick="closeModal('termModal')" class="w-full py-2 border border-slate-200 rounded-lg text-xs text-slate-600">关闭</button>
+    </div>
+  </div>
+
+  <!-- 6. 新增考试批次弹窗 -->
+  <div id="newExamModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border border-sage-100 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-slate-800">新增考试</h3>
+        <button onclick="closeModal('newExamModal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">考试名称/批次</label>
+          <input type="text" id="examNameInput" class="w-full text-sm border border-slate-200 rounded-lg p-2 outline-none" placeholder="例如：2026秋季学期第一次月考">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">勾选涉及科目及满分</label>
+          <div class="grid grid-cols-2 gap-2 text-xs" id="examSubjectsConfig">
+            <label class="flex items-center space-x-1.5"><input type="checkbox" value="语文" checked> <span>语文 (满分100)</span></label>
+            <label class="flex items-center space-x-1.5"><input type="checkbox" value="数学" checked> <span>数学 (满分100)</span></label>
+            <label class="flex items-center space-x-1.5"><input type="checkbox" value="英语" checked> <span>英语 (满分100)</span></label>
+            <label class="flex items-center space-x-1.5"><input type="checkbox" value="物理"> <span>物理 (满分100)</span></label>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end space-x-2 pt-2">
+        <button onclick="closeModal('newExamModal')" class="px-4 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-600">取消</button>
+        <button onclick="saveNewExamBatch()" class="px-4 py-2 bg-sage-500 hover:bg-sage-600 text-white rounded-lg text-xs font-medium">创建考试列表</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. 修改密码弹窗 -->
+  <div id="changePwdModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 border border-sage-100 space-y-4">
+      <h3 class="font-bold text-slate-800">修改密码</h3>
+      <div>
+        <label class="block text-xs text-slate-500 mb-1">新密码</label>
+        <input type="password" id="newPasswordInput" class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none" placeholder="填写新密码">
+      </div>
+      <div class="flex justify-end space-x-2">
+        <button onclick="closeModal('changePwdModal')" class="px-3 py-1.5 border rounded-lg text-xs">取消</button>
+        <button onclick="saveNewPassword()" class="px-3 py-1.5 bg-sage-500 text-white rounded-lg text-xs font-medium">确认</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ===== JavaScript 业务逻辑逻辑持久化与交互 ===== -->
+  <script>
+    // --- 默认初始数据（支持 LocalStorage 存储与还原） ---
+    const DEFAULT_DATA = {
+      currentTerm: "2026秋季学期 第7周",
+      teachers: [
+        { id: "t1", name: "张老师", email: "zhang@tongxue.com", password: "123456", classes: ["一年级", "二年级"], status: "在岗", attendance: "出勤" },
+        { id: "t2", name: "王老师", email: "wang@tongxue.com", password: "123456", classes: ["三年级", "四年级"], status: "在岗", attendance: "出勤" },
+        { id: "t3", name: "李老师", email: "li@tongxue.com", password: "123456", classes: ["五年级", "六年级"], status: "在岗", attendance: "出勤" }
+      ],
+      students: [
+        { id: "s1", name: "张小明", gender: "男", class: "一年级", teacherId: "t1", status: "在读", remark: "数学较弱，需多辅导计算", attendance: "已到" },
+        { id: "s2", name: "李红", gender: "女", class: "一年级", teacherId: "t1", status: "在读", remark: "书写规范", attendance: "已到" },
+        { id: "s3", name: "王伟", gender: "男", class: "二年级", teacherId: "t1", status: "在读", remark: "注意力容易分散", attendance: "已到" },
+        { id: "s4", name: "刘洋", gender: "男", class: "三年级", teacherId: "t2", status: "在读", remark: "英语背诵流利", attendance: "已到" },
+        { id: "s5", name: "陈思思", gender: "女", class: "四年级", teacherId: "t2", status: "在读", remark: "", attendance: "已到" },
+        { id: "s6", name: "赵雷", gender: "男", class: "五年级", teacherId: "t3", status: "在读", remark: "", attendance: "请假" }
+      ],
+      // 学生的作业明细结构（对应 SOP③ 辅导检查与附加任务）
+      homeworkTasks: [
+        { 
+          id: "hw1", 
+          studentId: "s1", 
+          subject: "语文", 
+          desc: "完成12页第一题至第四题，抄写生词两遍", 
+          status: "完成部分", // 未完成 / 已完成 / 已完成未查 / 完成部分
+          mistakes: "「静夜思」第三句有两个错别字，已订正", 
+          remark: "写字姿势较端正", 
+          imgUrl: "" 
+        },
+        { 
+          id: "hw2", 
+          studentId: "s1", 
+          subject: "数学", 
+          desc: "口算卡第5页（20道加减法）", 
+          status: "已完成", 
+          mistakes: "错2题，错因：粗心未看清运算符号", 
+          remark: "已监督现场重做", 
+          imgUrl: "" 
+        },
+        { 
+          id: "hw3", 
+          studentId: "s2", 
+          subject: "语文", 
+          desc: "预习第8课，读课文3遍", 
+          status: "已完成未查", 
+          mistakes: "", 
+          remark: "", 
+          imgUrl: "" 
+        }
+      ],
+      // 学生单独拆行展示的附加任务（对应 SOP③ 中的附加任务部分）
+      extraTasks: [
+        {
+          id: "ex1",
+          studentId: "s1",
+          subject: "英语",
+          desc: "单词听写 Unit 3 (10个)",
+          status: "已完成", // 未完成 / 部分完成 / 已完成
+          explainStatus: "已讲解", // 未讲解 / 已讲解
+          imgUrl: ""
+        }
+      ],
+      // 家长反馈数据（对应 SOP④ 家长反馈）
+      feedbacks: [
+        {
+          studentId: "s1",
+          text: "",
+          status: "未生成" // 未生成 / 已生成 / 已复制 / 已发送
+        }
+      ],
+      // 考试成绩
+      exams: [
+        {
+          id: "ex_batch_1",
+          name: "2026秋季学期第1次阶段测验",
+          subjects: ["语文", "数学", "英语"],
+          scores: {
+            "s1": { "语文": 85, "数学": 78, "英语": 90 },
+            "s2": { "语文": 92, "数学": 95, "英语": 88 },
+            "s3": { "语文": 76, "数学": 82, "英语": 80 }
+          }
+        }
+      ]
+    };
+
+    // 全局 State 状态
+    let state = {
+      currentUser: null, // { role: 'principal' | 'teacher', teacherObj: null }
+      currentTerm: "",
+      teachers: [],
+      students: [],
+      homeworkTasks: [],
+      extraTasks: [],
+      feedbacks: [],
+      exams: []
+    };
+
+    // 图表句柄
+    let schoolScoreChartInstance = null;
+    let examScoreChartInstance = null;
+
+    // --- Supabase 云端连接配置 ---
+    // Publishable Key 可用于浏览器前端；严禁将 sb_secret / service_role 密钥放入此文件。
+    const SUPABASE_URL = "https://wnlgvitxoxhbiaxxyzwp.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable__rs32hITcFiPQe7c34sIGw__exI7vlg";
+    const supabaseClient = (window.supabase && typeof window.supabase.createClient === "function")
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+        })
+      : null;
+
+    let cloudReady = false;
+    let cloudUser = null;
+    let cloudSyncTimer = null;
+    let cloudSyncRunning = false;
+    let cloudSyncQueued = false;
+    let suppressCloudSync = false;
+    let localSnapshotBeforeCloud = null;
+    let hadLocalCacheAtBoot = false;
+
+    function deepClone(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function setCloudStatus(message, tone = "muted") {
+      const el = document.getElementById("cloudSyncStatus");
+      if (!el) return;
+      el.textContent = message;
+      const classes = {
+        muted: "text-[10px] text-slate-400 ml-1",
+        good: "text-[10px] text-emerald-700 ml-1",
+        busy: "text-[10px] text-amber-700 ml-1",
+        error: "text-[10px] text-rose-600 ml-1"
+      };
+      el.className = classes[tone] || classes.muted;
+      el.title = message;
+    }
+
+    function localToday() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    // --- 启动：本地缓存只作临时副本，最终以云端认证与数据为准 ---
+    window.onload = async function() {
+      hadLocalCacheAtBoot = Boolean(localStorage.getItem("TONGXUE_SYSTEM_DATA"));
+      loadStateFromStorage();
+      localSnapshotBeforeCloud = deepClone(state);
+      state.currentUser = null; // 不信任本地缓存中的登录身份
+      renderApp();
+      setCloudStatus("正在检查云端登录…", "busy");
+
+      if (!supabaseClient) {
+        setCloudStatus("Supabase SDK 加载失败", "error");
+        alert("云端登录组件加载失败。请检查网络连接后刷新页面。");
+        return;
+      }
+
+      try {
+        const { data, error } = await supabaseClient.auth.getSession();
+        if (error) throw error;
+        if (data.session && data.session.user) {
+          await establishCloudSession(data.session.user, { offerLocalImport: false, silent: true });
+        } else {
+          setCloudStatus("云端未登录", "muted");
+          renderApp();
+        }
+      } catch (err) {
+        console.error("检查云端登录状态失败：", err);
+        setCloudStatus("云端连接失败", "error");
+        renderApp();
+      }
+    };
+
+    function loadStateFromStorage() {
+      const stored = localStorage.getItem("TONGXUE_SYSTEM_DATA");
+      if (stored) {
+        try {
+          state = { ...deepClone(DEFAULT_DATA), ...JSON.parse(stored) };
+        } catch (e) {
+          state = deepClone(DEFAULT_DATA);
+        }
+      } else {
+        state = deepClone(DEFAULT_DATA);
+      }
+
+      // 兼容旧版缓存：预置教师密码不一致时统一修正。本地密码不会用于云端认证。
+      let migrated = false;
+      if (!Array.isArray(state.teachers)) {
+        state.teachers = deepClone(DEFAULT_DATA.teachers);
+        migrated = true;
+      }
+      ["students", "homeworkTasks", "extraTasks", "feedbacks", "exams"].forEach(key => {
+        if (!Array.isArray(state[key])) {
+          state[key] = deepClone(DEFAULT_DATA[key] || []);
+          migrated = true;
+        }
+      });
+      if (!state.currentTerm) state.currentTerm = DEFAULT_DATA.currentTerm;
+      state.teachers.forEach(teacher => {
+        const builtInTeacher = DEFAULT_DATA.teachers.find(item =>
+          item.email.toLowerCase() === String(teacher.email || "").trim().toLowerCase()
+        );
+        if (builtInTeacher && (teacher.password === "123" || !teacher.password)) {
+          teacher.password = "123456";
+          migrated = true;
+        }
+      });
+      if (migrated || !stored) {
+        localStorage.setItem("TONGXUE_SYSTEM_DATA", JSON.stringify(state));
+      }
+    }
+
+    function writeLocalCache() {
+      try {
+        localStorage.setItem("TONGXUE_SYSTEM_DATA", JSON.stringify(state));
+      } catch (err) {
+        console.warn("保存本地缓存失败：", err);
+      }
+    }
+
+    function saveStateToStorage() {
+      writeLocalCache();
+      if (!suppressCloudSync && cloudReady && state.currentUser) queueCloudSync();
+    }
+
+    function queueCloudSync() {
+      if (!cloudReady || !state.currentUser || suppressCloudSync) return;
+      setCloudStatus("有更改，准备同步…", "busy");
+      if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
+      cloudSyncTimer = setTimeout(() => {
+        cloudSyncTimer = null;
+        syncStateToCloud();
+      }, 650);
+    }
+
+    async function selectDataOrThrow(query, label) {
+      const { data, error } = await query;
+      if (error) throw new Error(`${label}：${error.message}`);
+      return data || [];
+    }
+
+    async function upsertRows(table, rows, conflict = "id") {
+      if (!rows || rows.length === 0) return;
+      const { error } = await supabaseClient.from(table).upsert(rows, { onConflict: conflict });
+      if (error) throw new Error(`${table} 保存失败：${error.message}`);
+    }
+
+    async function pruneRemoteRows(table, selectFields, keyFields, keepKeys, filters = []) {
+      let query = supabaseClient.from(table).select(selectFields);
+      filters.forEach(([field, value]) => { query = query.eq(field, value); });
+      const rows = await selectDataOrThrow(query, `读取 ${table} 以核对删除项失败`);
+      for (const row of rows) {
+        const key = keyFields.map(field => String(row[field] ?? "")).join("\u001f");
+        if (keepKeys.has(key)) continue;
+        let del = supabaseClient.from(table).delete();
+        filters.forEach(([field, value]) => { del = del.eq(field, value); });
+        keyFields.forEach(field => { del = del.eq(field, row[field]); });
+        const { error } = await del;
+        if (error) throw new Error(`${table} 删除同步失败：${error.message}`);
+      }
+    }
+
+    function makeKeySet(rows, fields) {
+      return new Set((rows || []).map(row => fields.map(field => String(row[field] ?? "")).join("\u001f")));
+    }
+
+    async function fetchCloudState(profile, teacherRecord) {
+      const today = localToday();
+      const principal = profile.role === "principal";
+      const jobs = [
+        selectDataOrThrow(supabaseClient.from("teachers").select("*"), "读取教师档案失败"),
+        selectDataOrThrow(supabaseClient.from("students").select("*"), "读取学生档案失败"),
+        selectDataOrThrow(supabaseClient.from("homework_tasks").select("*"), "读取作业记录失败"),
+        selectDataOrThrow(supabaseClient.from("extra_tasks").select("*"), "读取附加任务失败"),
+        selectDataOrThrow(supabaseClient.from("feedbacks").select("*").eq("feedback_date", today), "读取家长反馈失败"),
+        selectDataOrThrow(supabaseClient.from("attendance_records").select("*").eq("attendance_date", today), "读取学生考勤失败"),
+        selectDataOrThrow(supabaseClient.from("teacher_attendance").select("*").eq("attendance_date", today), "读取教师考勤失败"),
+        selectDataOrThrow(supabaseClient.from("exams").select("*"), "读取考试批次失败"),
+        selectDataOrThrow(supabaseClient.from("exam_scores").select("*"), "读取考试成绩失败"),
+        selectDataOrThrow(supabaseClient.from("app_settings").select("*").eq("key", "currentTerm").maybeSingle(), "读取学期设置失败")
+      ];
+      if (principal) jobs.push(selectDataOrThrow(supabaseClient.from("profiles").select("id,email,full_name,role"), "读取账号资料失败"));
+      const results = await Promise.all(jobs);
+      const [teacherRows, studentRows, homeworkRows, extraRows, feedbackRows, attendanceRows, teacherAttendanceRows, examRows, scoreRows, termRows] = results;
+      const profileRows = principal ? (results[10] || []) : [profile];
+      const attendanceByStudent = new Map(attendanceRows.map(row => [row.student_id, row.status]));
+      const teacherAttendanceById = new Map(teacherAttendanceRows.map(row => [row.teacher_id, row.status]));
+
+      const cloudTeachers = teacherRows.map(row => ({
+        id: row.id, userId: row.user_id || "", name: row.name, email: row.email,
+        classes: row.classes || [], status: row.status || "在岗",
+        attendance: teacherAttendanceById.get(row.id) || row.attendance || "出勤", password: ""
+      }));
+      const cloudStudents = studentRows.map(row => ({
+        id: row.id, name: row.name, gender: row.gender || "", class: row.class_name || "",
+        teacherId: row.teacher_id || "", status: row.status || "在读", remark: row.remark || "",
+        attendance: attendanceByStudent.get(row.id) || row.attendance || "待登记"
+      }));
+      const cloudHomework = homeworkRows.map(row => ({
+        id: row.id, studentId: row.student_id, subject: row.subject || "", desc: row.description || "",
+        status: row.status || "未完成", mistakes: row.mistakes || "", remark: row.remark || "", imgUrl: row.img_url || ""
+      }));
+      const cloudExtra = extraRows.map(row => ({
+        id: row.id, studentId: row.student_id, subject: row.subject || "", desc: row.description || "",
+        status: row.status || "未完成", explainStatus: row.explain_status || "未讲解", imgUrl: row.img_url || ""
+      }));
+      const cloudFeedback = feedbackRows.map(row => ({ studentId: row.student_id, text: row.content || "", status: row.status || "未生成" }));
+      const cloudExams = examRows.map(row => ({
+        id: row.id, name: row.name, subjects: row.subjects || [], scores: {}, createdBy: row.created_by || ""
+      }));
+      const examsById = new Map(cloudExams.map(exam => [exam.id, exam]));
+      scoreRows.forEach(row => {
+        const exam = examsById.get(row.exam_id);
+        if (!exam) return;
+        if (!exam.scores[row.student_id]) exam.scores[row.student_id] = {};
+        exam.scores[row.student_id][row.subject] = row.score === null ? "" : row.score;
+      });
+      const termRow = Array.isArray(termRows) ? termRows[0] : termRows;
+      let term = DEFAULT_DATA.currentTerm;
+      if (termRow && termRow.value !== undefined) term = typeof termRow.value === "string" ? termRow.value : String(termRow.value);
+
+      return {
+        currentTerm: term,
+        teachers: cloudTeachers,
+        students: cloudStudents,
+        homeworkTasks: cloudHomework,
+        extraTasks: cloudExtra,
+        feedbacks: cloudFeedback,
+        exams: cloudExams,
+        profiles: profileRows,
+        _teacherRecord: teacherRecord
+      };
+    }
+
+    async function establishCloudSession(user, options = {}) {
+      const { data: profile, error: profileError } = await supabaseClient
+        .from("profiles").select("id,email,full_name,role").eq("id", user.id).maybeSingle();
+      if (profileError) {
+        throw new Error("读取账号角色失败。请先在 Supabase 执行数据库建表脚本及后续连接补丁。详情：" + profileError.message);
+      }
+      if (!profile) throw new Error("账号资料不存在。请确认已执行数据库初始化 SQL，然后重新登录。");
+
+      let teacherRecord = null;
+      if (profile.role === "teacher") {
+        const { data, error } = await supabaseClient.from("teachers").select("*").eq("user_id", user.id).maybeSingle();
+        if (error) throw new Error("读取教师档案失败：" + error.message);
+        teacherRecord = data;
+        if (!teacherRecord) {
+          throw new Error("该邮箱已通过云端认证，但还没有关联教师档案。请先使用校长账号创建/绑定教师档案，再登录。");
+        }
+      } else if (profile.role !== "principal") {
+        throw new Error("当前账号角色无效，请联系管理员在 profiles 表中设置 principal 或 teacher。");
+      }
+
+      const cloudState = await fetchCloudState(profile, teacherRecord);
+      const userInfo = profile.role === "principal"
+        ? { role: "principal", name: profile.full_name || "校长", email: user.email || profile.email, authId: user.id }
+        : { role: "teacher", name: teacherRecord.name || profile.full_name || "教师", email: user.email || teacherRecord.email, id: teacherRecord.id, authId: user.id };
+
+      const canOfferImport = options.offerLocalImport && profile.role === "principal" && hadLocalCacheAtBoot &&
+        localSnapshotBeforeCloud && Array.isArray(localSnapshotBeforeCloud.students) && localSnapshotBeforeCloud.students.length > 0 &&
+        cloudState.students.length === 0 && cloudState.teachers.length === 0;
+      if (canOfferImport && confirm("检测到这个浏览器里有旧版网站数据，而云端目前还没有教师和学生档案。\n\n是否把此浏览器中的教师、学生、作业、反馈和成绩导入 Supabase？\n\n注意：只会导入当前浏览器保存的数据；导入后其他设备才能读取这些数据。")) {
+        state = deepClone(localSnapshotBeforeCloud);
+        state.currentUser = userInfo;
+        const profileByEmail = new Map((cloudState.profiles || []).map(item => [String(item.email || "").trim().toLowerCase(), item]));
+        state.teachers.forEach(t => {
+          const matchedProfile = profileByEmail.get(String(t.email || "").trim().toLowerCase());
+          if (matchedProfile) t.userId = matchedProfile.id;
+        });
+        cloudReady = true;
+        cloudUser = user;
+        setCloudStatus("正在导入旧数据…", "busy");
+        await syncStateToCloud(true);
+        const reloaded = await fetchCloudState(profile, teacherRecord);
+        applyCloudState(reloaded, userInfo);
+      } else {
+        applyCloudState(cloudState, userInfo);
+      }
+
+      cloudUser = user;
+      cloudReady = true;
+      writeLocalCache();
+      setCloudStatus("云端已连接", "good");
+      renderApp();
+    }
+
+    function applyCloudState(cloudState, userInfo) {
+      state = {
+        currentUser: userInfo,
+        currentTerm: cloudState.currentTerm || DEFAULT_DATA.currentTerm,
+        teachers: cloudState.teachers || [],
+        students: cloudState.students || [],
+        homeworkTasks: cloudState.homeworkTasks || [],
+        extraTasks: cloudState.extraTasks || [],
+        feedbacks: cloudState.feedbacks || [],
+        exams: cloudState.exams || []
+      };
+    }
+
+    async function syncStateToCloud(force = false) {
+      if (!supabaseClient || !cloudReady || !state.currentUser) return;
+      if (cloudSyncRunning && !force) {
+        cloudSyncQueued = true;
+        return;
+      }
+      cloudSyncRunning = true;
+      cloudSyncQueued = false;
+      const snapshot = deepClone(state);
+      const principal = snapshot.currentUser.role === "principal";
+      const today = localToday();
+      try {
+        if (principal) {
+          const profiles = await selectDataOrThrow(supabaseClient.from("profiles").select("id,email"), "读取账号绑定关系失败");
+          const profileByEmail = new Map(profiles.map(row => [String(row.email || "").trim().toLowerCase(), row]));
+          snapshot.teachers.forEach(t => {
+            const p = profileByEmail.get(String(t.email || "").trim().toLowerCase());
+            if (p) t.userId = p.id;
+          });
+          const teacherRows = snapshot.teachers.map(t => ({
+            id: t.id, user_id: t.userId || null, name: t.name, email: t.email,
+            classes: t.classes || [], status: t.status || "在岗", attendance: t.attendance || "出勤"
+          }));
+          await upsertRows("teachers", teacherRows, "id");
+        }
+
+        const studentRows = snapshot.students.map(s => ({
+          id: s.id, name: s.name, gender: s.gender || "", class_name: s.class || "",
+          teacher_id: s.teacherId || null, status: s.status || "在读", remark: s.remark || "",
+          attendance: s.attendance || "待登记"
+        }));
+        await upsertRows("students", studentRows, "id");
+
+        const examRows = snapshot.exams
+          .filter(e => principal || !e.createdBy || e.createdBy === (cloudUser && cloudUser.id))
+          .map(e => ({
+            id: e.id, name: e.name, subjects: e.subjects || [],
+            ...(e.createdBy ? { created_by: e.createdBy } : (!principal && cloudUser ? { created_by: cloudUser.id } : {}))
+          }));
+        await upsertRows("exams", examRows, "id");
+
+        const homeworkRows = snapshot.homeworkTasks.map(h => ({
+          id: h.id, student_id: h.studentId, subject: h.subject || "", description: h.desc || "",
+          status: h.status || "未完成", mistakes: h.mistakes || "", remark: h.remark || "", img_url: h.imgUrl || ""
+        }));
+        await upsertRows("homework_tasks", homeworkRows, "id");
+
+        const extraRows = snapshot.extraTasks.map(e => ({
+          id: e.id, student_id: e.studentId, subject: e.subject || "", description: e.desc || "",
+          status: e.status || "未完成", explain_status: e.explainStatus || "未讲解", img_url: e.imgUrl || ""
+        }));
+        await upsertRows("extra_tasks", extraRows, "id");
+
+        const scoreRows = [];
+        snapshot.exams.forEach(exam => {
+          Object.entries(exam.scores || {}).forEach(([studentId, subjects]) => {
+            Object.entries(subjects || {}).forEach(([subject, value]) => {
+              if (value === undefined) return;
+              scoreRows.push({ exam_id: exam.id, student_id: studentId, subject, score: value === "" || value === null ? null : Number(value) });
+            });
+          });
+        });
+        await upsertRows("exam_scores", scoreRows, "exam_id,student_id,subject");
+
+        const attendanceRows = snapshot.students.map(s => ({
+          student_id: s.id, attendance_date: today, status: s.attendance || "待登记", note: ""
+        }));
+        await upsertRows("attendance_records", attendanceRows, "student_id,attendance_date");
+
+        const feedbackRows = snapshot.feedbacks.map(f => ({
+          student_id: f.studentId, feedback_date: today, content: f.text || "", status: f.status || "未生成"
+        }));
+        await upsertRows("feedbacks", feedbackRows, "student_id,feedback_date");
+
+        if (principal) {
+          const teacherAttendanceRows = snapshot.teachers.map(t => ({
+            teacher_id: t.id, attendance_date: today, status: t.attendance || "出勤", note: ""
+          }));
+          await upsertRows("teacher_attendance", teacherAttendanceRows, "teacher_id,attendance_date");
+          const { error: settingsError } = await supabaseClient.from("app_settings").upsert({
+            key: "currentTerm", value: snapshot.currentTerm || DEFAULT_DATA.currentTerm,
+            updated_by: cloudUser ? cloudUser.id : null
+          }, { onConflict: "key" });
+          if (settingsError) throw new Error("保存学期设置失败：" + settingsError.message);
+        }
+
+        // 只清理当前登录用户通过 RLS 可见的记录；历史考勤和历史反馈保留。
+        await pruneRemoteRows("homework_tasks", "id", ["id"], makeKeySet(homeworkRows, ["id"]));
+        await pruneRemoteRows("extra_tasks", "id", ["id"], makeKeySet(extraRows, ["id"]));
+        await pruneRemoteRows("feedbacks", "student_id", ["student_id"], makeKeySet(feedbackRows, ["student_id"]), [["feedback_date", today]]);
+        await pruneRemoteRows("attendance_records", "student_id", ["student_id"], makeKeySet(attendanceRows, ["student_id"]), [["attendance_date", today]]);
+        await pruneRemoteRows("exam_scores", "exam_id,student_id,subject", ["exam_id", "student_id", "subject"], makeKeySet(scoreRows, ["exam_id", "student_id", "subject"]));
+        await pruneRemoteRows("students", "id", ["id"], makeKeySet(studentRows, ["id"]));
+        // 教师可查看全校考试批次，但只能修改自己创建的批次，因此不由教师端执行考试批次清理。
+        if (principal) await pruneRemoteRows("exams", "id", ["id"], makeKeySet(examRows, ["id"]));
+        if (principal) {
+          await pruneRemoteRows("teacher_attendance", "teacher_id", ["teacher_id"], makeKeySet(snapshot.teachers.map(t => ({ teacher_id: t.id })), ["teacher_id"]), [["attendance_date", today]]);
+          await pruneRemoteRows("teachers", "id", ["id"], makeKeySet(snapshot.teachers.map(t => ({ id: t.id })), ["id"]));
+        }
+
+        setCloudStatus("已同步到云端 · " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), "good");
+      } catch (err) {
+        console.error("云端同步失败：", err);
+        setCloudStatus("同步失败，请检查 SQL/权限", "error");
+        const el = document.getElementById("cloudSyncStatus");
+        if (el) el.title = err.message || String(err);
+      } finally {
+        cloudSyncRunning = false;
+        if (cloudSyncQueued && cloudReady) {
+          cloudSyncQueued = false;
+          queueCloudSync();
+        }
+      }
+    }
+
+    // --- 身份与登录：全部通过 Supabase Auth 校验，不再使用 HTML 内置密码判断 ---
+    async function handleLogin(e) {
+      e.preventDefault();
+      if (!supabaseClient) return alert("云端登录组件没有加载成功，请检查网络后刷新页面。");
+      const email = document.getElementById("loginEmail").value.trim().toLowerCase();
+      const pwd = document.getElementById("loginPassword").value;
+      if (!email || !pwd) return alert("请输入邮箱和密码。");
+      const submitButton = document.querySelector('#loginForm button[type="submit"]');
+      if (submitButton) { submitButton.disabled = true; submitButton.textContent = "正在登录…"; }
+      setCloudStatus("正在验证账号…", "busy");
+      try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pwd });
+        if (error) throw new Error(error.message);
+        await establishCloudSession(data.user, { offerLocalImport: true, silent: false });
+      } catch (err) {
+        console.error("云端登录失败：", err);
+        await supabaseClient.auth.signOut().catch(() => {});
+        cloudReady = false;
+        cloudUser = null;
+        state.currentUser = null;
+        renderApp();
+        setCloudStatus("登录失败", "error");
+        let message = err.message || "未知错误";
+        if (/Invalid login credentials/i.test(message)) message = "邮箱或密码错误。请确认该账号已经在 Supabase → Authentication → Users 中创建，并且密码正确。";
+        if (/profiles|relation|column|schema cache|permission denied|row-level security|does not exist/i.test(message)) {
+          message += "\n\n请确认已经执行数据库建表 SQL 和连接补丁 SQL。";
+        }
+        alert("登录或读取云端数据失败：\n" + message);
+      } finally {
+        if (submitButton) { submitButton.disabled = false; submitButton.innerHTML = "登 录 系 统"; }
+      }
+    }
+
+    function quickFill(email) {
+      document.getElementById("loginEmail").value = email;
+      document.getElementById("loginPassword").value = "123456";
+    }
+
+    async function logout() {
+      try {
+        if (supabaseClient) await supabaseClient.auth.signOut();
+      } catch (err) {
+        console.warn("云端退出时出现提示：", err);
+      }
+      cloudReady = false;
+      cloudUser = null;
+      state.currentUser = null;
+      writeLocalCache();
+      document.getElementById("loginSection").classList.remove("hidden");
+      setCloudStatus("云端未登录", "muted");
+      renderApp();
+    }
+
+    function openChangePwdModal() {
+      document.getElementById("changePwdModal").classList.remove("hidden");
+    }
+
+    async function saveNewPassword() {
+      const pwd = document.getElementById("newPasswordInput").value;
+      if (!pwd) return alert("请输入新密码");
+      if (pwd.length < 6) return alert("密码至少需要 6 位。");
+      if (!supabaseClient || !cloudReady) return alert("请先登录云端账号。");
+      const { error } = await supabaseClient.auth.updateUser({ password: pwd });
+      if (error) return alert("密码修改失败：" + error.message);
+      document.getElementById("newPasswordInput").value = "";
+      closeModal("changePwdModal");
+      alert("云端登录密码已修改成功！下次在其他设备登录时请使用新密码。");
+    }
+
+    // --- 主视图渲染驱动 ---
+    function renderApp() {
+      document.getElementById("termStatusDisplay").innerHTML = `<i class="fa-regular fa-calendar-alt text-sage-500 mr-1"></i>${state.currentTerm}`;
+
+      if (!state.currentUser) {
+        document.getElementById("loginSection").classList.remove("hidden");
+        return;
+      } else {
+        document.getElementById("loginSection").classList.add("hidden");
+      }
+
+      // 更新 Header 身份显示
+      document.getElementById("userNameDisplay").innerText = state.currentUser.name;
+      document.getElementById("userEmailDisplay").innerText = state.currentUser.email;
+
+      if (state.currentUser.role === 'principal') {
+        document.getElementById("roleBadge").innerText = "校长端";
+        document.getElementById("principalView").classList.remove("hidden");
+        document.getElementById("teacherView").classList.add("hidden");
+        
+        renderPrincipalOverview();
+        renderTeacherManagementTable();
+        renderStudentManagementTable();
+      } else {
+        document.getElementById("roleBadge").innerText = "教师端";
+        document.getElementById("teacherView").classList.remove("hidden");
+        document.getElementById("principalView").classList.add("hidden");
+
+        renderSOP1Attendance();
+        renderSOP2DispatchedTasks();
+        renderSOP3StudentCards();
+        renderSOP4FeedbackCards();
+        renderExamModule();
+      }
+    }
+
+    // Modal 通用关闭
+    function closeModal(id) {
+      document.getElementById(id).classList.add("hidden");
+    }
+
+    // 学期切换
+    function toggleTermModal() {
+      document.getElementById("termModal").classList.remove("hidden");
+    }
+    function selectTerm(termName) {
+      if (state.currentUser && state.currentUser.role !== "principal") {
+        alert("只有校长端可以切换当前教学学期。");
+        return;
+      }
+      state.currentTerm = termName;
+      saveStateToStorage();
+      closeModal("termModal");
+      renderApp();
+    }
+
+
+    // ==========================================
+    // ===== 校长端 业务逻辑与 UI 渲染 =====
+    // ==========================================
+    function switchPrincipalTab(tabKey) {
+      ['overview', 'teachers', 'students'].forEach(k => {
+        const btn = document.getElementById(`tab-${k}`);
+        const sec = document.getElementById(`p-sec-${k}`);
+        if (k === tabKey) {
+          btn.className = "pb-3 border-b-2 border-sage-500 text-sage-700 font-semibold flex items-center space-x-2";
+          sec.classList.remove("hidden");
+        } else {
+          btn.className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center space-x-2";
+          sec.classList.add("hidden");
+        }
+      });
+      if (tabKey === 'overview') renderPrincipalOverview();
+    }
+
+    function renderPrincipalOverview() {
+      // 动态统计算法
+      const totalStud = state.students.filter(s => s.status === '在读').length;
+      const presentStud = state.students.filter(s => s.status === '在读' && s.attendance === '已到').length;
+      document.getElementById("statAttendance").innerText = totalStud > 0 ? ((presentStud / totalStud) * 100).toFixed(1) + "%" : "0%";
+      document.getElementById("statTotalStudents").innerText = totalStud + " 人";
+
+      const totalHw = state.homeworkTasks.length;
+      const doneHw = state.homeworkTasks.filter(h => h.status === '已完成' || h.status === '已完成未查').length;
+      document.getElementById("statHomework").innerText = totalHw > 0 ? ((doneHw / totalHw) * 100).toFixed(1) + "%" : "100%";
+
+      const totalEx = state.extraTasks.length;
+      const doneEx = state.extraTasks.filter(e => e.status === '已完成').length;
+      document.getElementById("statExtra").innerText = totalEx > 0 ? ((doneEx / totalEx) * 100).toFixed(1) + "%" : "100%";
+
+      // 各班级辅导进度列表
+      const classes = ["一年级", "二年级", "三年级", "四年级", "五年级", "六年级", "初一", "初二", "初三"];
+      const classProgressList = document.getElementById("classProgressList");
+      classProgressList.innerHTML = "";
+      classes.forEach(c => {
+        const cStudents = state.students.filter(s => s.class === c && s.status === '在读');
+        if (cStudents.length === 0) return;
+        const cStudIds = cStudents.map(s => s.id);
+        const cHw = state.homeworkTasks.filter(h => cStudIds.includes(h.studentId));
+        const cDone = cHw.filter(h => h.status === '已完成' || h.status === '已完成未查').length;
+        const pct = cHw.length > 0 ? Math.round((cDone / cHw.length) * 100) : 100;
+
+        classProgressList.innerHTML += `
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="font-medium text-slate-700">${c} (${cStudents.length}人)</span>
+              <span class="text-sage-600 font-bold">${pct}%</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div class="bg-sage-500 h-2 rounded-full" style="width: ${pct}%"></div>
+            </div>
+          </div>
+        `;
+      });
+
+      // 初始化趋势图表
+      initSchoolChart();
+    }
+
+    function initSchoolChart() {
+      const ctx = document.getElementById('schoolScoreChart').getContext('2d');
+      if (schoolScoreChartInstance) schoolScoreChartInstance.destroy();
+      
+      schoolScoreChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['第1周', '第2周', '第3周', '第4周', '第5周', '第6周', '第7周'],
+          datasets: [
+            {
+              label: '平均优秀率 (%)',
+              data: [82, 85, 84, 88, 87, 90, 92],
+              borderColor: '#588c73',
+              backgroundColor: 'rgba(88, 140, 115, 0.1)',
+              fill: true,
+              tension: 0.3
+            },
+            {
+              label: '平均及格率 (%)',
+              data: [95, 96, 95, 98, 97, 99, 100],
+              borderColor: '#38e36e',
+              borderDash: [5, 5],
+              fill: false,
+              tension: 0.3
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' } },
+          scales: { y: { min: 60, max: 100 } }
+        }
+      });
+    }
+
+    // 校长端 - 教师管理与考勤渲染
+    function renderTeacherManagementTable() {
+      const tbody = document.getElementById("teacherTableBody");
+      tbody.innerHTML = "";
+      
+      state.teachers.forEach(t => {
+        const classesTag = t.classes && t.classes.length > 0 
+          ? t.classes.map(c => `<span class="px-2 py-0.5 bg-sage-50 text-sage-700 border border-sage-200 rounded text-xs mr-1">${c}</span>`).join("")
+          : `<span class="text-slate-400 text-xs">未分配班级</span>`;
+
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="px-4 py-3 font-semibold text-slate-800">${t.name}</td>
+            <td class="px-4 py-3">${t.email}</td>
+            <td class="px-4 py-3">${classesTag}</td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded-full text-xs ${t.status === '在岗' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}">
+                ${t.status}
+              </span>
+            </td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded text-xs ${t.attendance === '出勤' ? 'bg-sage-100 text-sage-800' : 'bg-amber-100 text-amber-800'}">
+                ${t.attendance || '出勤'}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-right space-x-2">
+              <button onclick="openEditTeacherClassesModal('${t.id}')" class="text-sage-600 hover:text-sage-800 font-medium text-xs">
+                <i class="fa-solid fa-pen-to-square mr-1"></i>修改班级
+              </button>
+              <button onclick="openDeleteTeacherModal('${t.id}')" class="text-rose-500 hover:text-rose-700 font-medium text-xs">
+                <i class="fa-solid fa-trash-can mr-1"></i>删除
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      // 考勤登记 Grid
+      const grid = document.getElementById("teacherAttendanceGrid");
+      grid.innerHTML = "";
+      state.teachers.forEach(t => {
+        grid.innerHTML += `
+          <div class="p-3 border border-slate-100 rounded-xl bg-slate-50/50 flex justify-between items-center">
+            <div>
+              <div class="font-bold text-slate-800 text-sm">${t.name}</div>
+              <div class="text-xs text-slate-400">${t.email}</div>
+            </div>
+            <select onchange="updateTeacherAttendance('${t.id}', this.value)" class="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white outline-none">
+              <option value="出勤" ${t.attendance === '出勤' ? 'selected' : ''}>🟢 出勤</option>
+              <option value="事假" ${t.attendance === '事假' ? 'selected' : ''}>🟡 事假</option>
+              <option value="病假" ${t.attendance === '病假' ? 'selected' : ''}>🔴 病假</option>
+              <option value="出差" ${t.attendance === '出差' ? 'selected' : ''}>🔵 出差</option>
+            </select>
+          </div>
+        `;
+      });
+    }
+
+    function updateTeacherAttendance(tId, val) {
+      const t = state.teachers.find(x => x.id === tId);
+      if (t) {
+        t.attendance = val;
+        saveStateToStorage();
+        renderTeacherManagementTable();
+      }
+    }
+
+    // 校长端修改教师负责班级 Modal 功能
+    function openEditTeacherClassesModal(tId) {
+      const teacher = state.teachers.find(t => t.id === tId);
+      if (!teacher) return;
+      document.getElementById("editTeacherIdTarget").value = tId;
+      document.getElementById("targetTeacherName").innerText = teacher.name;
+
+      const checkboxes = document.querySelectorAll("#classCheckboxGroup input[type='checkbox']");
+      checkboxes.forEach(cb => {
+        cb.checked = teacher.classes ? teacher.classes.includes(cb.value) : false;
+      });
+
+      document.getElementById("editTeacherClassesModal").classList.remove("hidden");
+    }
+
+    function saveTeacherClassesChange() {
+      const tId = document.getElementById("editTeacherIdTarget").value;
+      const teacher = state.teachers.find(t => t.id === tId);
+      if (!teacher) return;
+
+      const selected = [];
+      const checkboxes = document.querySelectorAll("#classCheckboxGroup input[type='checkbox']");
+      checkboxes.forEach(cb => {
+        if (cb.checked) selected.push(cb.value);
+      });
+
+      teacher.classes = selected;
+      saveStateToStorage();
+      closeModal("editTeacherClassesModal");
+      renderTeacherManagementTable();
+      alert(`已成功更新 ${teacher.name} 的负责班级！`);
+    }
+
+    // 校长端删除教师及自动解绑学生
+    function openDeleteTeacherModal(tId) {
+      document.getElementById("deleteTeacherIdTarget").value = tId;
+      document.getElementById("deleteTeacherConfirmModal").classList.remove("hidden");
+    }
+
+    function confirmDeleteTeacher() {
+      const tId = document.getElementById("deleteTeacherIdTarget").value;
+      
+      // 1. 删除该教师
+      state.teachers = state.teachers.filter(t => t.id !== tId);
+      
+      // 2. 自动解绑名下绑定的学生
+      state.students.forEach(s => {
+        if (s.teacherId === tId) {
+          s.teacherId = ""; // 解绑
+        }
+      });
+
+      saveStateToStorage();
+      closeModal("deleteTeacherConfirmModal");
+      renderTeacherManagementTable();
+      renderStudentManagementTable();
+      alert("教师已安全删除，其绑定的学生已自动解绑关联！");
+    }
+
+    // 新增教师
+    function openAddTeacherModal() {
+      document.getElementById("addTeacherModal").classList.remove("hidden");
+    }
+    async function saveNewTeacher() {
+      const name = document.getElementById("newTeacherName").value.trim();
+      const email = document.getElementById("newTeacherEmail").value.trim().toLowerCase();
+      if (!name || !email) return alert("请填写完整姓名与邮箱！");
+      if (!cloudReady || !state.currentUser || state.currentUser.role !== "principal") {
+        return alert("请先使用校长账号登录云端后再创建教师档案。");
+      }
+      try {
+        const { data: profile, error } = await supabaseClient
+          .from("profiles").select("id,email,full_name,role").ilike("email", email).maybeSingle();
+        if (error) throw error;
+        if (!profile) {
+          return alert("尚未找到这个邮箱对应的云端登录账号。请先在 Supabase → Authentication → Users 中创建用户并设置密码，再回来创建教师档案。");
+        }
+        if (profile.role !== "teacher") {
+          return alert("该邮箱当前不是教师角色，请检查 profiles 表中的 role 设置。");
+        }
+        if (state.teachers.some(t => String(t.email || "").toLowerCase() === email)) {
+          return alert("这个邮箱已经存在于教师档案中。");
+        }
+        const newT = {
+          id: "t_" + Date.now(), userId: profile.id, name, email,
+          classes: [], status: "在岗", attendance: "出勤", password: ""
+        };
+        state.teachers.push(newT);
+        saveStateToStorage();
+        closeModal("addTeacherModal");
+        renderTeacherManagementTable();
+        alert("教师档案已创建，云端登录账号已绑定。请教师使用在 Supabase Auth 中设置的密码登录。");
+      } catch (err) {
+        console.error("创建教师档案失败：", err);
+        alert("创建教师档案失败：" + (err.message || String(err)));
+      }
+    }
+
+    // 校长端 - 学生档案管理渲染
+    function renderStudentManagementTable() {
+      const filterClass = document.getElementById("pStudentClassFilter") ? document.getElementById("pStudentClassFilter").value : "ALL";
+      const tbody = document.getElementById("studentTableBody");
+      tbody.innerHTML = "";
+
+      const filtered = state.students.filter(s => filterClass === "ALL" || s.class === filterClass);
+
+      filtered.forEach(s => {
+        const teacher = state.teachers.find(t => t.id === s.teacherId);
+        const teacherName = teacher ? teacher.name : `<span class="text-rose-500 font-bold">未分配教师</span>`;
+
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="px-4 py-3 font-semibold text-slate-800">${s.name}</td>
+            <td class="px-4 py-3">${s.gender}</td>
+            <td class="px-4 py-3"><span class="px-2 py-0.5 bg-slate-100 rounded text-xs">${s.class}</span></td>
+            <td class="px-4 py-3">${teacherName}</td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded-full text-xs ${s.status === '在读' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}">
+                ${s.status}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-xs text-slate-400 truncate max-w-xs">${s.remark || '无'}</td>
+            <td class="px-4 py-3 text-right">
+              <button onclick="openStudentModal('${s.id}')" class="text-sage-600 hover:text-sage-800 font-medium text-xs">
+                <i class="fa-solid fa-user-pen mr-1"></i>编辑
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    // 编辑/新增学生档案 Modal
+    function openStudentModal(sId = "") {
+      const selectTeacher = document.getElementById("studentModalTeacher");
+      selectTeacher.innerHTML = `<option value="">未分配指导教师</option>` + 
+        state.teachers.map(t => `<option value="${t.id}">${t.name} (${(t.classes || []).join(",") || "全科"})</option>`).join("");
+      selectTeacher.disabled = Boolean(state.currentUser && state.currentUser.role === "teacher");
+
+      if (sId) {
+        const s = state.students.find(x => x.id === sId);
+        document.getElementById("studentModalTitle").innerText = "编辑学生档案";
+        document.getElementById("studentModalId").value = s.id;
+        document.getElementById("studentModalName").value = s.name;
+        document.getElementById("studentModalGender").value = s.gender;
+        document.getElementById("studentModalClass").value = s.class;
+        document.getElementById("studentModalTeacher").value = s.teacherId || "";
+        document.getElementById("studentModalStatus").value = s.status;
+        document.getElementById("studentModalRemark").value = s.remark || "";
+      } else {
+        document.getElementById("studentModalTitle").innerText = "新增学生档案";
+        document.getElementById("studentModalId").value = "";
+        document.getElementById("studentModalName").value = "";
+        document.getElementById("studentModalGender").value = "男";
+        document.getElementById("studentModalClass").value = "一年级";
+        document.getElementById("studentModalTeacher").value = state.currentUser && state.currentUser.role === "teacher" ? state.currentUser.id : "";
+        document.getElementById("studentModalTeacher").disabled = Boolean(state.currentUser && state.currentUser.role === "teacher");
+        document.getElementById("studentModalStatus").value = "在读";
+        document.getElementById("studentModalRemark").value = "";
+      }
+
+      document.getElementById("studentModal").classList.remove("hidden");
+    }
+
+    function saveStudentModal() {
+      const id = document.getElementById("studentModalId").value;
+      const name = document.getElementById("studentModalName").value.trim();
+      const gender = document.getElementById("studentModalGender").value;
+      const sClass = document.getElementById("studentModalClass").value;
+      const teacherId = document.getElementById("studentModalTeacher").value;
+      const status = document.getElementById("studentModalStatus").value;
+      const remark = document.getElementById("studentModalRemark").value;
+
+      if (!name) return alert("请填写学生姓名！");
+
+      if (id) {
+        const s = state.students.find(x => x.id === id);
+        if (s) {
+          s.name = name;
+          s.gender = gender;
+          s.class = sClass;
+          s.teacherId = teacherId;
+          s.status = status;
+          s.remark = remark;
+        }
+      } else {
+        const newS = {
+          id: "s_" + Date.now(),
+          name: name,
+          gender: gender,
+          class: sClass,
+          teacherId: teacherId,
+          status: status,
+          remark: remark,
+          attendance: "已到"
+        };
+        state.students.push(newS);
+      }
+
+      saveStateToStorage();
+      closeModal("studentModal");
+      renderStudentManagementTable();
+      if (state.currentUser.role === 'teacher') {
+        renderSOP1Attendance();
+        renderSOP3StudentCards();
+      }
+    }
+
+
+    // ==========================================
+    // ===== 教师端 业务逻辑与 UI 渲染 =====
+    // ==========================================
+    function switchTeacherTab(tabKey) {
+      ['sop', 'scores'].forEach(k => {
+        const btn = document.getElementById(`ttab-${k}`);
+        const sec = document.getElementById(`t-sec-${k}`);
+        if (k === tabKey) {
+          btn.className = "pb-3 border-b-2 border-sage-500 text-sage-700 font-semibold flex items-center space-x-2";
+          sec.classList.remove("hidden");
+        } else {
+          btn.className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center space-x-2";
+          sec.classList.add("hidden");
+        }
+      });
+      if (tabKey === 'scores') renderExamModule();
+    }
+
+    // 获取当前登录教师负责的学生列表
+    function getMyStudents() {
+      if (!state.currentUser || state.currentUser.role !== 'teacher') return [];
+      return state.students.filter(s => s.teacherId === state.currentUser.id && s.status === '在读');
+    }
+
+    // SOP① 内部考勤
+    function renderSOP1Attendance() {
+      const container = document.getElementById("sopAttendanceContainer");
+      container.innerHTML = "";
+
+      const myStudents = getMyStudents();
+      if (myStudents.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 col-span-full py-4 text-center">当前暂无归属给您的学生，请校长在学生档案库中分配指导教师。</p>`;
+        return;
+      }
+
+      // 按班级分组
+      const groupMap = {};
+      myStudents.forEach(s => {
+        if (!groupMap[s.class]) groupMap[s.class] = [];
+        groupMap[s.class].push(s);
+      });
+
+      for (const cName in groupMap) {
+        let listHtml = "";
+        groupMap[cName].forEach(s => {
+          listHtml += `
+            <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-slate-100 transition text-xs">
+              <div>
+                <span class="font-bold text-slate-800 mr-1">${s.name}</span>
+                <span class="text-[10px] text-slate-400">(${s.gender})</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <select onchange="changeStudentAttendance('${s.id}', this.value)" class="text-xs border border-slate-200 rounded px-1.5 py-0.5 bg-white outline-none">
+                  <option value="已到" ${s.attendance === '已到' ? 'selected' : ''}>已到</option>
+                  <option value="请假" ${s.attendance === '请假' ? 'selected' : ''}>请假</option>
+                  <option value="迟到" ${s.attendance === '迟到' ? 'selected' : ''}>迟到</option>
+                  <option value="缺勤" ${s.attendance === '缺勤' ? 'selected' : ''}>缺勤</option>
+                </select>
+                <button onclick="openStudentModal('${s.id}')" class="text-slate-400 hover:text-sage-600"><i class="fa-solid fa-pen"></i></button>
+              </div>
+            </div>
+          `;
+        });
+
+        container.innerHTML += `
+          <div class="border border-sage-100 rounded-xl p-3 bg-white space-y-2">
+            <div class="font-bold text-xs text-sage-800 border-b border-sage-50 pb-1.5 flex justify-between">
+              <span>${cName}</span>
+              <span class="text-slate-400 font-normal">${groupMap[cName].length} 人</span>
+            </div>
+            <div class="space-y-1.5">${listHtml}</div>
+          </div>
+        `;
+      }
+    }
+
+    function changeStudentAttendance(sId, statusVal) {
+      const s = state.students.find(x => x.id === sId);
+      if (s) {
+        s.attendance = statusVal;
+        saveStateToStorage();
+      }
+    }
+
+    function quickCheckAllPresent() {
+      const myStudents = getMyStudents();
+      myStudents.forEach(s => { s.attendance = '已到'; });
+      saveStateToStorage();
+      renderSOP1Attendance();
+      alert("已将您名下的所有学生考勤快速标记为「已到」！");
+    }
+
+    // SOP② 作业派发逻辑
+    function dispatchHomework() {
+      const targetClass = document.getElementById("dispatchClassSelect").value;
+      const subject = document.getElementById("dispatchSubjectSelect").value;
+      const desc = document.getElementById("dispatchContentInput").value.trim();
+
+      if (!desc) return alert("请填写要派发的作业内容描述！");
+
+      const myStudents = getMyStudents();
+      const targetStudents = myStudents.filter(s => targetClass === "ALL" || s.class === targetClass);
+
+      if (targetStudents.length === 0) return alert("选定的班级下没有关联的学生！");
+
+      targetStudents.forEach(s => {
+        state.homeworkTasks.push({
+          id: "hw_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+          studentId: s.id,
+          subject: subject,
+          desc: desc,
+          status: "未完成",
+          mistakes: "",
+          remark: "",
+          imgUrl: ""
+        });
+      });
+
+      document.getElementById("dispatchContentInput").value = "";
+      saveStateToStorage();
+      renderSOP2DispatchedTasks();
+      renderSOP3StudentCards();
+      alert(`已成功向 ${targetStudents.length} 名学生批量派发【${subject}】作业！`);
+    }
+
+    function renderSOP2DispatchedTasks() {
+      const container = document.getElementById("dispatchedTasksList");
+      container.innerHTML = "";
+
+      const myStudIds = getMyStudents().map(s => s.id);
+      const myTasks = state.homeworkTasks.filter(h => myStudIds.includes(h.studentId));
+
+      if (myTasks.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 py-4">暂未向任何学生派发日常作业，请在左侧配置派发。</p>`;
+        return;
+      }
+
+      // 倒序展示最近派发的任务
+      myTasks.slice().reverse().forEach(hw => {
+        const student = state.students.find(s => s.id === hw.studentId);
+        if (!student) return;
+
+        container.innerHTML += `
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+            <div class="space-y-0.5">
+              <div class="flex items-center space-x-2">
+                <span class="font-bold text-slate-800">${student.name}</span>
+                <span class="px-1.5 py-0.5 bg-slate-200 text-slate-600 rounded text-[10px]">${student.class}</span>
+                <span class="px-1.5 py-0.5 bg-sage-100 text-sage-800 font-semibold rounded text-[10px]">${hw.subject}</span>
+              </div>
+              <p class="text-slate-600">${hw.desc}</p>
+            </div>
+            <button onclick="deleteDispatchedTask('${hw.id}')" class="text-slate-400 hover:text-rose-600 p-1" title="微调删除">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        `;
+      });
+    }
+
+    function deleteDispatchedTask(hwId) {
+      state.homeworkTasks = state.homeworkTasks.filter(h => h.id !== hwId);
+      saveStateToStorage();
+      renderSOP2DispatchedTasks();
+      renderSOP3StudentCards();
+    }
+
+
+    // ==========================================
+    // ===== 重重点修改部分：SOP③ 辅导检查与附加任务 =====
+    // ==========================================
+    function renderSOP3StudentCards() {
+      const filterClass = document.getElementById("sop3ClassFilter") ? document.getElementById("sop3ClassFilter").value : "ALL";
+      const container = document.getElementById("sop3StudentCardsContainer");
+      container.innerHTML = "";
+
+      const myStudents = getMyStudents().filter(s => filterClass === "ALL" || s.class === filterClass);
+
+      if (myStudents.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">暂无对应的学生作业记录。</p>`;
+        return;
+      }
+
+      myStudents.forEach(s => {
+        // 该学生的所有日常作业
+        const sHomeworks = state.homeworkTasks.filter(h => h.studentId === s.id);
+        // 该学生的所有附加任务
+        const sExtras = state.extraTasks.filter(e => e.studentId === s.id);
+
+        // 生成日常作业 HTML List (直接在作业完成状态处展示详细作业内容)
+        let hwListHtml = "";
+        if (sHomeworks.length === 0) {
+          hwListHtml = `<p class="text-xs text-slate-400 py-1">暂无常规派发作业</p>`;
+        } else {
+          sHomeworks.forEach(hw => {
+            hwListHtml += `
+              <div class="bg-slate-50/80 p-3 rounded-xl border border-slate-200/80 space-y-2">
+                <!-- 顶部：科目、描述与状态下拉框 -->
+                <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                  <div class="flex items-center space-x-2">
+                    <span class="px-2 py-0.5 bg-sage-500 text-white font-bold text-xs rounded">${hw.subject}</span>
+                    <span class="text-xs font-medium text-slate-800">${hw.desc}</span>
+                  </div>
+                  <!-- 完成状态选单【未完成/已完成/已完成未查/完成部分】 -->
+                  <div class="flex items-center space-x-1.5">
+                    <span class="text-[11px] text-slate-400">状态:</span>
+                    <select onchange="updateHomeworkField('${hw.id}', 'status', this.value)" class="text-xs border border-slate-300 rounded-lg px-2 py-1 bg-white font-medium text-slate-700 outline-none focus:ring-1 focus:ring-sage-400">
+                      <option value="未完成" ${hw.status === '未完成' ? 'selected' : ''}>🔴 未完成</option>
+                      <option value="完成部分" ${hw.status === '完成部分' ? 'selected' : ''}>🟡 完成部分</option>
+                      <option value="已完成未查" ${hw.status === '已完成未查' ? 'selected' : ''}>🔵 已完成未查</option>
+                      <option value="已完成" ${hw.status === '已完成' ? 'selected' : ''}>🟢 已完成</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- 错题/知识点记录 & 辅导备注 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs pt-1">
+                  <div>
+                    <input type="text" value="${hw.mistakes || ''}" onblur="updateHomeworkField('${hw.id}', 'mistakes', this.value)" class="w-full border border-slate-200 rounded-lg p-1.5 bg-white text-slate-700 outline-none focus:border-sage-400" placeholder="错题/错因/知识点记录...">
+                  </div>
+                  <div>
+                    <input type="text" value="${hw.remark || ''}" onblur="updateHomeworkField('${hw.id}', 'remark', this.value)" class="w-full border border-slate-200 rounded-lg p-1.5 bg-white text-slate-700 outline-none focus:border-sage-400" placeholder="辅导备注说明...">
+                  </div>
+                </div>
+
+                <!-- 图片上传 preview -->
+                <div class="flex items-center space-x-2 pt-1 text-xs">
+                  <label class="cursor-pointer px-2 py-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-md text-[11px] flex items-center">
+                    <i class="fa-solid fa-camera mr-1 text-sage-500"></i>${hw.imgUrl ? '更换作业图片' : '上传作业照片'}
+                    <input type="file" accept="image/*" class="hidden" onchange="uploadTaskImage('${hw.id}', 'hw', this)">
+                  </label>
+                  ${hw.imgUrl ? `<a href="${hw.imgUrl}" target="_blank" class="text-sage-600 underline text-[11px]">查看图片预览</a>` : '<span class="text-[10px] text-slate-400">未上传照片</span>'}
+                </div>
+              </div>
+            `;
+          });
+        }
+
+        // 生成附加任务 HTML List (结构与日常作业一致，单独拆行展示)
+        let extraListHtml = "";
+        sExtras.forEach(ex => {
+          extraListHtml += `
+            <div class="bg-amber-50/50 p-3 rounded-xl border border-amber-200/60 space-y-2 mt-2">
+              <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                <div class="flex items-center space-x-2 flex-1">
+                  <span class="px-2 py-0.5 bg-amber-500 text-white font-bold text-xs rounded">附加·${ex.subject}</span>
+                  <input type="text" value="${ex.desc}" onblur="updateExtraTaskField('${ex.id}', 'desc', this.value)" class="text-xs border border-amber-200 rounded p-1 font-medium text-slate-800 bg-white flex-1 outline-none focus:border-amber-400" placeholder="编写附加任务内容">
+                </div>
+                
+                <!-- 完成状态 & 讲解状态 -->
+                <div class="flex items-center space-x-2 text-xs">
+                  <select onchange="updateExtraTaskField('${ex.id}', 'status', this.value)" class="border border-amber-300 rounded-lg px-2 py-1 bg-white text-slate-700 font-medium outline-none">
+                    <option value="未完成" ${ex.status === '未完成' ? 'selected' : ''}>🔴 未完成</option>
+                    <option value="部分完成" ${ex.status === '部分完成' ? 'selected' : ''}>🟡 部分完成</option>
+                    <option value="已完成" ${ex.status === '已完成' ? 'selected' : ''}>🟢 已完成</option>
+                  </select>
+
+                  <select onchange="updateExtraTaskField('${ex.id}', 'explainStatus', this.value)" class="border border-amber-300 rounded-lg px-2 py-1 bg-white text-slate-700 font-medium outline-none">
+                    <option value="未讲解" ${ex.explainStatus === '未讲解' ? 'selected' : ''}>未讲解</option>
+                    <option value="已讲解" ${ex.explainStatus === '已讲解' ? 'selected' : ''}>已讲解</option>
+                  </select>
+
+                  <button onclick="deleteExtraTask('${ex.id}')" class="text-rose-400 hover:text-rose-600"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+              </div>
+
+              <!-- 资料图片上传 -->
+              <div class="flex items-center space-x-2 pt-1 text-xs">
+                <label class="cursor-pointer px-2 py-1 bg-white border border-amber-200 hover:bg-amber-100 text-slate-600 rounded-md text-[11px] flex items-center">
+                  <i class="fa-solid fa-image mr-1 text-amber-500"></i>${ex.imgUrl ? '更换资料图片' : '上传资料图片'}
+                  <input type="file" accept="image/*" class="hidden" onchange="uploadTaskImage('${ex.id}', 'ex', this)">
+                </label>
+                ${ex.imgUrl ? `<a href="${ex.imgUrl}" target="_blank" class="text-amber-700 underline text-[11px]">查看图片</a>` : '<span class="text-[10px] text-slate-400">无资料图片</span>'}
+              </div>
+            </div>
+          `;
+        });
+
+        // 拼接学生整体外壳卡片
+        container.innerHTML += `
+          <div class="border border-sage-200 rounded-2xl bg-white p-4 shadow-sm space-y-3">
+            <!-- 学生卡片 Header -->
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+              <div class="flex items-center space-x-2">
+                <span class="text-base font-bold text-slate-800">${s.name}</span>
+                <span class="px-2 py-0.5 bg-sage-100 text-sage-800 text-xs font-semibold rounded">${s.class}</span>
+                <span class="text-xs text-slate-400">考勤状态: ${s.attendance}</span>
+              </div>
+              <button onclick="addExtraTaskForStudent('${s.id}')" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 rounded-lg text-xs font-semibold transition flex items-center">
+                <i class="fa-solid fa-plus mr-1"></i>+ 拆行新增附加任务
+              </button>
+            </div>
+
+            <!-- 详细作业展示区块 -->
+            <div class="space-y-2">
+              <h5 class="text-xs font-bold text-slate-500 uppercase tracking-wider"><i class="fa-solid fa-book text-sage-500 mr-1"></i>日常作业（包含完成状态、错题与备注）</h5>
+              <div class="space-y-2">${hwListHtml}</div>
+            </div>
+
+            <!-- 附加任务拆行展示区块 -->
+            <div class="space-y-2 pt-2 border-t border-slate-100">
+              <h5 class="text-xs font-bold text-amber-700 uppercase tracking-wider"><i class="fa-solid fa-circle-plus mr-1"></i>附加提升任务（单独拆行展示）</h5>
+              ${sExtras.length === 0 ? '<p class="text-xs text-slate-400">暂无附加任务</p>' : extraListHtml}
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // 更新常规作业字段
+    function updateHomeworkField(hwId, field, val) {
+      const hw = state.homeworkTasks.find(h => h.id === hwId);
+      if (hw) {
+        hw[field] = val;
+        saveStateToStorage();
+      }
+    }
+
+    // 新增附加任务
+    function addExtraTaskForStudent(sId) {
+      state.extraTasks.push({
+        id: "ex_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+        studentId: sId,
+        subject: "综合",
+        desc: "补充提高训练项",
+        status: "未完成",
+        explainStatus: "未讲解",
+        imgUrl: ""
+      });
+      saveStateToStorage();
+      renderSOP3StudentCards();
+    }
+
+    // 更新附加任务字段
+    function updateExtraTaskField(exId, field, val) {
+      const ex = state.extraTasks.find(e => e.id === exId);
+      if (ex) {
+        ex[field] = val;
+        saveStateToStorage();
+      }
+    }
+
+    // 删除附加任务
+    function deleteExtraTask(exId) {
+      state.extraTasks = state.extraTasks.filter(e => e.id !== exId);
+      saveStateToStorage();
+      renderSOP3StudentCards();
+    }
+
+    // 图片文件转 Base64 上传模拟
+    function uploadTaskImage(id, type, inputEl) {
+      if (!inputEl.files || !inputEl.files[0]) return;
+      const file = inputEl.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64Str = e.target.result;
+        if (type === 'hw') {
+          const hw = state.homeworkTasks.find(h => h.id === id);
+          if (hw) hw.imgUrl = base64Str;
+        } else {
+          const ex = state.extraTasks.find(x => x.id === id);
+          if (ex) ex.imgUrl = base64Str;
+        }
+        saveStateToStorage();
+        renderSOP3StudentCards();
+      };
+      reader.readAsDataURL(file);
+    }
+
+
+    // ==========================================
+    // ===== SOP④ 家长反馈 (原SOP⑥重命名) =====
+    // ==========================================
+    function renderSOP4FeedbackCards() {
+      const container = document.getElementById("sop4FeedbackContainer");
+      container.innerHTML = "";
+
+      const myStudents = getMyStudents();
+      if (myStudents.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 col-span-full py-4 text-center">暂无学生反馈需求</p>`;
+        return;
+      }
+
+      myStudents.forEach(s => {
+        let fbObj = state.feedbacks.find(f => f.studentId === s.id);
+        if (!fbObj) {
+          fbObj = { studentId: s.id, text: "", status: "未生成" };
+          state.feedbacks.push(fbObj);
+        }
+
+        // 高对比度状态徽章
+        let statusBadge = "";
+        if (fbObj.status === "已发送") statusBadge = `<span class="px-2 py-0.5 bg-emerald-600 text-white text-xs font-bold rounded">已发送</span>`;
+        else if (fbObj.status === "已复制") statusBadge = `<span class="px-2 py-0.5 bg-blue-600 text-white text-xs font-bold rounded">已复制</span>`;
+        else if (fbObj.status === "已生成") statusBadge = `<span class="px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded">已生成</span>`;
+        else statusBadge = `<span class="px-2 py-0.5 bg-slate-300 text-slate-700 text-xs font-bold rounded">未生成</span>`;
+
+        container.innerHTML += `
+          <div class="bg-white p-4 rounded-2xl border border-sage-200 shadow-sm space-y-3 flex flex-col justify-between">
+            <div class="space-y-2">
+              <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                <div class="flex items-center space-x-2">
+                  <span class="font-bold text-slate-800 text-sm">${s.name}</span>
+                  <span class="text-xs text-slate-400">(${s.class})</span>
+                </div>
+                ${statusBadge}
+              </div>
+
+              <!-- 文本预览/编辑框 -->
+              <textarea id="fb_text_${s.id}" rows="5" class="w-full text-xs border border-slate-200 rounded-xl p-2.5 font-sans leading-relaxed text-slate-700 outline-none focus:ring-1 focus:ring-sage-400 bg-slate-50/50" placeholder="点击生成或直接编写反馈文本...">${fbObj.text || ''}</textarea>
+            </div>
+
+            <div class="flex items-center justify-between pt-1 gap-2">
+              <button onclick="generateSingleFeedback('${s.id}')" class="px-3 py-1.5 bg-sage-100 hover:bg-sage-200 text-sage-800 rounded-lg text-xs font-medium transition">
+                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>自动生成文本
+              </button>
+              
+              <div class="flex items-center space-x-2">
+                <button onclick="copyFeedbackText('${s.id}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition">
+                  <i class="fa-regular fa-copy mr-1"></i>复制
+                </button>
+                <button onclick="markFeedbackSent('${s.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium transition">
+                  <i class="fa-solid fa-check mr-1"></i>标记已发送
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // 反馈自动生成算法规则（去姓氏、去考勤）
+    function buildFeedbackString(s) {
+      // 名字不带姓氏规则：如“张小明” -> “小明”，“李红” -> “红”
+      let shortName = s.name;
+      if (s.name.length >= 3) {
+        shortName = s.name.substring(1);
+      } else if (s.name.length === 2) {
+        shortName = s.name.substring(1);
+      }
+
+      const hwList = state.homeworkTasks.filter(h => h.studentId === s.id);
+      const exList = state.extraTasks.filter(e => e.studentId === s.id);
+
+      let str = `${shortName}妈妈/爸爸晚上好，这是${shortName}今天的学习情况：\n\n`;
+
+      if (hwList.length === 0 && exList.length === 0) {
+        str += `今天各科作业完成情况良好，表现优异！`;
+        return str;
+      }
+
+      // 按学科归类日常作业
+      const hwBySub = {};
+      hwList.forEach(hw => {
+        if (!hwBySub[hw.subject]) hwBySub[hw.subject] = [];
+        hwBySub[hw.subject].push(hw);
+      });
+
+      for (const sub in hwBySub) {
+        str += `【${sub}】\n`;
+        hwBySub[sub].forEach((item, idx) => {
+          str += `${idx + 1}. ${item.desc} （${item.status}${item.mistakes ? '·' + item.mistakes : ''}${item.remark ? '·' + item.remark : ''}）\n`;
+        });
+      }
+
+      // 附加任务
+      if (exList.length > 0) {
+        str += `\n【附加提升】\n`;
+        exList.forEach((item, idx) => {
+          str += `${idx + 1}. ${item.subject}：${item.desc} （${item.status}·${item.explainStatus}）\n`;
+        });
+      }
+
+      return str;
+    }
+
+    function generateSingleFeedback(sId) {
+      const s = state.students.find(x => x.id === sId);
+      if (!s) return;
+      const generated = buildFeedbackString(s);
+
+      let fbObj = state.feedbacks.find(f => f.studentId === sId);
+      if (!fbObj) {
+        fbObj = { studentId: sId, text: "", status: "未生成" };
+        state.feedbacks.push(fbObj);
+      }
+      fbObj.text = generated;
+      fbObj.status = "已生成";
+      saveStateToStorage();
+      renderSOP4FeedbackCards();
+    }
+
+    function batchGenerateAllFeedback() {
+      const myStudents = getMyStudents();
+      myStudents.forEach(s => {
+        let fbObj = state.feedbacks.find(f => f.studentId === s.id);
+        if (!fbObj) {
+          fbObj = { studentId: s.id, text: "", status: "未生成" };
+          state.feedbacks.push(fbObj);
+        }
+        fbObj.text = buildFeedbackString(s);
+        fbObj.status = "已生成";
+      });
+      saveStateToStorage();
+      renderSOP4FeedbackCards();
+      alert("已成功为所有负责学生一键生成家长反馈文本！");
+    }
+
+    function copyFeedbackText(sId) {
+      const txtArea = document.getElementById(`fb_text_${sId}`);
+      if (txtArea) {
+        txtArea.select();
+        document.execCommand('copy');
+        
+        let fbObj = state.feedbacks.find(f => f.studentId === sId);
+        if (fbObj) fbObj.status = "已复制";
+        saveStateToStorage();
+        renderSOP4FeedbackCards();
+        alert("已成功复制家长反馈文本到剪贴板！");
+      }
+    }
+
+    function markFeedbackSent(sId) {
+      let fbObj = state.feedbacks.find(f => f.studentId === sId);
+      if (fbObj) fbObj.status = "已发送";
+      saveStateToStorage();
+      renderSOP4FeedbackCards();
+    }
+
+
+    // ==========================================
+    // ===== 成绩登记与分析 业务逻辑 =====
+    // ==========================================
+    function renderExamModule() {
+      const batchSelect = document.getElementById("examBatchSelect");
+      batchSelect.innerHTML = state.exams.map(e => `<option value="${e.id}">${e.name}</option>`).join("");
+
+      if (state.exams.length === 0) return;
+      
+      renderExamAnalysis();
+    }
+
+    function renderExamAnalysis() {
+      const batchId = document.getElementById("examBatchSelect").value;
+      const exam = state.exams.find(e => e.id === batchId);
+      if (!exam) return;
+
+      const myStudents = getMyStudents();
+      const myStudIds = myStudents.map(s => s.id);
+
+      // 计算平均分、最高分、及格率
+      let totalScores = 0;
+      let count = 0;
+      let maxScore = 0;
+      let passCount = 0;
+
+      const scoresBySubject = {};
+      exam.subjects.forEach(sub => scoresBySubject[sub] = []);
+
+      myStudIds.forEach(sId => {
+        if (exam.scores[sId]) {
+          exam.subjects.forEach(sub => {
+            const val = exam.scores[sId][sub];
+            if (val !== undefined && val !== null && val !== "") {
+              const num = parseFloat(val);
+              scoresBySubject[sub].push(num);
+              totalScores += num;
+              count++;
+              if (num > maxScore) maxScore = num;
+              if (num >= 60) passCount++;
+            }
+          });
+        }
+      });
+
+      const avgScore = count > 0 ? (totalScores / count).toFixed(1) : 0;
+      const passRate = count > 0 ? ((passCount / count) * 100).toFixed(1) + "%" : "0%";
+
+      document.getElementById("examStatBox").innerHTML = `
+        <div class="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+          <span class="text-slate-500">班级全科平均分</span>
+          <span class="font-bold text-sage-600 text-base">${avgScore} 分</span>
+        </div>
+        <div class="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+          <span class="text-slate-500">单科最高分</span>
+          <span class="font-bold text-slate-800 text-base">${maxScore} 分</span>
+        </div>
+        <div class="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+          <span class="text-slate-500">总体及格率</span>
+          <span class="font-bold text-emerald-600 text-base">${passRate}</span>
+        </div>
+      `;
+
+      // 渲染柱状图
+      initExamChart(exam.subjects, scoresBySubject);
+
+      // 渲染成绩输入表格
+      renderExamScoreTable(exam, myStudents);
+    }
+
+    function initExamChart(subjects, scoresBySubject) {
+      const ctx = document.getElementById('examScoreChart').getContext('2d');
+      if (examScoreChartInstance) examScoreChartInstance.destroy();
+
+      const avgData = subjects.map(sub => {
+        const arr = scoresBySubject[sub] || [];
+        if (arr.length === 0) return 0;
+        return (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1);
+      });
+
+      examScoreChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: subjects,
+          datasets: [{
+            label: '学科平均得分',
+            data: avgData,
+            backgroundColor: '#588c73',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { min: 0, max: 100 } }
+        }
+      });
+    }
+
+    function renderExamScoreTable(exam, students) {
+      const thead = document.getElementById("examTableHead");
+      thead.innerHTML = `
+        <th class="px-4 py-3">学生姓名</th>
+        <th class="px-4 py-3">班级</th>
+        ${exam.subjects.map(sub => `<th class="px-4 py-3">${sub} (100分)</th>`).join("")}
+      `;
+
+      const tbody = document.getElementById("examTableBody");
+      tbody.innerHTML = "";
+
+      students.forEach(s => {
+        const studentScores = exam.scores[s.id] || {};
+        let scoreInputsHtml = "";
+
+        exam.subjects.forEach(sub => {
+          const scoreVal = studentScores[sub] !== undefined ? studentScores[sub] : "";
+          scoreInputsHtml += `
+            <td class="px-4 py-2">
+              <input type="number" min="0" max="100" value="${scoreVal}" onblur="saveStudentExamScore('${exam.id}', '${s.id}', '${sub}', this.value)" class="w-20 text-xs border border-slate-200 rounded p-1 text-center outline-none focus:border-sage-500" placeholder="得分">
+            </td>
+          `;
+        });
+
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="px-4 py-3 font-semibold text-slate-800">${s.name}</td>
+            <td class="px-4 py-3"><span class="px-2 py-0.5 bg-slate-100 rounded text-xs">${s.class}</span></td>
+            ${scoreInputsHtml}
+          </tr>
+        `;
+      });
+    }
+
+    function saveStudentExamScore(examId, studentId, subject, val) {
+      const exam = state.exams.find(e => e.id === examId);
+      if (!exam) return;
+      if (!exam.scores[studentId]) exam.scores[studentId] = {};
+      exam.scores[studentId][subject] = val !== "" ? parseFloat(val) : "";
+      saveStateToStorage();
+      renderExamAnalysis();
+    }
+
+    // 新增考试 Batch
+    function openNewExamModal() {
+      document.getElementById("newExamModal").classList.remove("hidden");
+    }
+
+    function saveNewExamBatch() {
+      const name = document.getElementById("examNameInput").value.trim();
+      if (!name) return alert("请输入考试批次名称！");
+
+      const checkboxes = document.querySelectorAll("#examSubjectsConfig input[type='checkbox']:checked");
+      const subjects = Array.from(checkboxes).map(cb => cb.value);
+
+      if (subjects.length === 0) return alert("请至少勾选一个涉及考试科目！");
+
+      const newExam = {
+        id: "ex_batch_" + Date.now(),
+        name: name,
+        subjects: subjects,
+        scores: {}
+      };
+
+      state.exams.push(newExam);
+      saveStateToStorage();
+      closeModal("newExamModal");
+      renderExamModule();
+    }
+  </script>
+</body>
+</html>
